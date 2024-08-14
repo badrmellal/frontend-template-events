@@ -16,6 +16,11 @@
   }
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+body {
+  font-family: 'Montserrat', sans-serif;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -30,4 +35,20 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+
+@keyframes fade-in-down {
+  from {
+      opacity: 0;
+      transform: translateY(-20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.5s ease-out;
 }
