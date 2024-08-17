@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -39,7 +40,11 @@ export default function Home() {
         {events}
       </div>
       <div className="flex justify-center items-center font-lg text-xl">
-          We will make it happen.
+        <Link href={"/login"}>
+          <button className="rounded-lg shadow-md px-4 py-2 font-montserrat font-bold text-black border border-gray-800 hover:text-white hover:bg-black">
+            Login
+          </button>
+        </Link>
         </div>
     
     </main>

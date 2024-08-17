@@ -20,7 +20,7 @@ const Dropdown: React.FC<DropdownProps> = ({options, selectedValue, onChange}) =
                 <button 
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex justify-between w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex justify-between w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
                 >
                     {options.find(option => option.value === selectedValue)?.label || 'Select an option'}
                     <svg
@@ -51,7 +51,6 @@ const Dropdown: React.FC<DropdownProps> = ({options, selectedValue, onChange}) =
                             </a>
                         ))}
                     </div>
-
                 </div>
             )}
 
