@@ -1,54 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+  
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+
+
+
+
+/* Custom styles for the time picker */
+.custom-time-picker .react-time-picker__wrapper {
+    background-color: #2d3748; /* bg-gray-800 */
+    color: #edf2f7; /* text-gray-100 */
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 0.5rem; /* p-2 */
+    border: 1px solid #4a5568; /* border-gray-600 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+.custom-time-picker .react-time-picker__inputGroup__input {
+    background: transparent;
+    color: #edf2f7; /* text-gray-100 */
+    border: none;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
-body {
-  font-family: 'Montserrat', sans-serif;
+.custom-time-picker .react-time-picker__inputGroup__divider {
+    color: #edf2f7; /* text-gray-100 */
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+.custom-time-picker .react-time-picker__clear-button {
+    display: none; /* Hide clear button */
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-
-@keyframes fade-in-down {
-  from {
-      opacity: 0;
-      transform: translateY(-40px);
-  }
-  to {
-      opacity: 1;
-      transform: translateY(0);
-  }
-}
-
-.animate-fade-in-down {
-  animation: fade-in-down 0.6s ease-out;
+.custom-time-picker .react-time-picker__clock {
+    background-color: #2d3748; /* bg-gray-800 */
+    border-color: #4a5568; /* border-gray-600 */
+    color: #edf2f7; /* text-gray-100 */
 }

@@ -8,11 +8,13 @@ const Home = () =>{
     const router = useRouter();
     const [eventList, setEventList] = useState<string>('');
 
+    
     useEffect(() => {
         const storedToken = localStorage.getItem("token");
         if(!storedToken){
             router.push("/login");
         } else {
+            //just for debugging 
             console.log("Stored Token: ", storedToken);
 
             axios.get("http://localhost:8080/events/authenticated-basic-user",
@@ -51,3 +53,4 @@ const Home = () =>{
 }
 
 export default Home;
+

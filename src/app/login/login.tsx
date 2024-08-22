@@ -8,6 +8,7 @@ import { FaApple } from "react-icons/fa";
 import { MarqueeForReviews } from "../components/reviews";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { JwtPayload, jwtDecode } from "jwt-decode";
 
 const Login: React.FC = () => {
   const router = useRouter();
@@ -62,6 +63,10 @@ const Login: React.FC = () => {
     handleValidation();
   }, [handleValidation]);
 
+  //to include it in jwt payload because authorities don't exist initially in JwtPayload
+  interface CustomJwtPayload extends JwtPayload{
+    authorities: string[];
+  }
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,7 +87,26 @@ const Login: React.FC = () => {
         setEmail("");
         setPassword("");
         localStorage.setItem("token", response.data);
-        router.push("/home");
+        const decodedToken = jwtDecode<CustomJwtPayload>(response.data);
+        const userAuthorities = decodedToken.authorities;
+
+        if (
+          userAuthorities.includes("user:read") &&
+          userAuthorities.includes("event:read")
+        ) {
+          if (
+            userAuthorities.includes("event:create") &&
+            userAuthorities.includes("event:update")
+          ) {
+            router.push("/publisher/dashboard");
+          } else {
+            router.push("/user/dashboard");
+          }
+        } else if (userAuthorities.includes("user:delete")) {
+          router.push("/admin/dashboard");
+        } else {
+          router.push("/access-denied");
+        }
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
