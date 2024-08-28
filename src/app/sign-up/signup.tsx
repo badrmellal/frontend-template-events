@@ -3,12 +3,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Dropdown from "./dropdown";
 import axios from "axios";
-import Notification from "../components/notification";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
 import { MarqueeForReviews } from "../components/reviews";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 
 const SignUp: React.FC = () => {
   const router = useRouter();
@@ -19,10 +19,8 @@ const SignUp: React.FC = () => {
   const [disabled, setDisabled] = useState(true);
   const [googleAppleDisabled, setGoogleAppleDisabled] = useState(true);
   const [dirty, setDirty] = useState(false);
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const { toast } = useToast();
 
   const roles = [
     { label: "I want to buy tickets", value: "ROLE_BASIC_USER" },
@@ -35,43 +33,24 @@ const SignUp: React.FC = () => {
   };
 
   const handleValidation = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
     const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password);
 
     if (dirty) {
       if (!validateEmail(email)) {
-        setNotification({
-          message: "Please enter a valid email address.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.email = "Please enter a valid email address.";
       }
       if (password.length < 7) {
-        setNotification({
-          message: "Password must be at least 7 characters long.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.password = "Password must be at least 7 characters long.";
       }
       if (!validPassword) {
-        setNotification({
-          message: "Password must contain both letters and numbers.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.password = "Password must contain both letters and numbers.";
       }
       if (!role) {
-        setNotification({
-          message: "Please select the account type.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.role = "Please select the account type.";
       }
-      setDisabled(false);
-      setNotification(null);
+      setErrors(newErrors);
+      setDisabled(Object.keys(newErrors).length > 0);
     }
   }, [email, password, dirty, role]);
 
@@ -82,13 +61,17 @@ const SignUp: React.FC = () => {
   useEffect(() => {
     if (!role) {
       setGoogleAppleDisabled(true);
-      setNotification({
-        message: "Please select the account type first.",
-        type: "error",
-      });
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        role: "Please select the account type first.",
+      }));
       return;
     }
     setGoogleAppleDisabled(false);
+    setErrors((prevErrors) => {
+      const { role, ...rest } = prevErrors;
+      return rest;
+    });
   }, [role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,12 +88,14 @@ const SignUp: React.FC = () => {
       );
 
       if (response.status === 201) {
-        setNotification({ message: "Account created successfully!", type: "success" });
         setUsername("");
         setEmail("");
         setPassword("");
         setRole("");
-        router.push("/login")
+        toast({ 
+          title: "Login to continue!",
+        })
+        router.push("/login");
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -119,11 +104,24 @@ const SignUp: React.FC = () => {
 
         if (status === 409) {
           errorMessage = err.response?.data || "Email or username already exist! Please try again.";
+          toast({
+            variant: "destructive",
+            title: "Email or username already exist!",
+            description: "Please try again."
+          })
         }
+        toast({
+          variant: "destructive",
+          title: "Failed to create account!",
+          description: "Please try again."
+        })
 
-        setNotification({ message: errorMessage, type: "error" });
       } else {
-        setNotification({ message: "An unexpected error occurred! Please try again.", type: "error" });
+        toast({
+          variant: "destructive",
+          title: "An unexpected error occurred!",
+          description: "Please try again."
+        })
       }
     }
   };
@@ -139,9 +137,10 @@ const SignUp: React.FC = () => {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="bg-white z-10 p-8 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md"
       >
-        <h2 className="text-3xl font-semibold mb-8 text-center font-montserrat text-gray-800">
-          Create an account to begin
+        <h2 className="text-3xl font-semibold mb-4 text-left font-montserrat text-gray-800">
+          Register
         </h2>
+          <p className="text-sm font-medium mb-8 text-left text-gray-500">Create an account to get started</p>
         <form onSubmit={handleSubmit}>
           <div className="mb-5 mt-3 relative">
             <input
@@ -159,6 +158,7 @@ const SignUp: React.FC = () => {
             >
               Username
             </label>
+            {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
           </div>
           <div className="mb-5 mt-3 relative">
             <input
@@ -179,6 +179,7 @@ const SignUp: React.FC = () => {
             >
               Email
             </label>
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
           <div className="mb-5 mt-3 relative">
             <input
@@ -199,6 +200,7 @@ const SignUp: React.FC = () => {
             >
               Password
             </label>
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
           <div className="mb-6">
             <label className="block text-gray-700 font-montserrat text-sm font-bold mb-2" htmlFor="role">
@@ -209,7 +211,9 @@ const SignUp: React.FC = () => {
               selectedValue={role}
               onChange={(value) => setRole(value)}
             />
+            {errors.role && <p className="text-red-500 text-sm">{errors.role}</p>}
           </div>
+          {errors.global && <p className="text-red-500 text-sm mb-4">{errors.global}</p>}
           <div className="flex items-center justify-between">
             <motion.button
               type="submit"
@@ -266,13 +270,6 @@ const SignUp: React.FC = () => {
           </div>
         </form>
       </motion.div>
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
-      )}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react"; 
+import { Calendar as CalendarIcon, Headset, LogOut } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SidebarPublisher from '@/app/components/sidebar-publisher';
+import Image from 'next/image';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface EventFormInputs {
     eventName: string;
@@ -172,10 +175,24 @@ const CreateEvent: React.FC = () => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            toast({
-                title: "Event created successfully!",
-                description: "Congratulation on publishing a new event."
-            })
+            if (response.status === 201){
+                toast({
+                    title: "Event created successfully!",
+                    description: "Congratulation on publishing a new event."
+                })
+                setFormData({
+                    eventName: '',
+                    eventCategory: '',
+                    eventDescription: '',
+                    eventImage: null,
+                    eventVideo: null,
+                    eventPrice: 0,
+                    eventDate: '',
+                    addressLocation: '',
+                    googleMapsUrl: '',
+                    totalTickets: 0,
+                })
+            }
         } catch (error: any) {
             console.error('Error creating event:', error);
             if(error.response && error.response.status === 401) {
@@ -190,11 +207,42 @@ const CreateEvent: React.FC = () => {
         }
     };
 
+    const handleLogOut = () => {
+        localStorage.removeItem("token");
+        window.location.reload();
+    }
+
     return (
-        <div className="bg-gray-900 text-white min-h-screen">
+        <div className="bg-gray-900 min-h-screen">
+            <SidebarPublisher />
+            <div className="flex justify-end pt-3 pr-3">
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="overflow-hidden rounded-full"
+                >
+                    <Image
+                    src="/profile_avatar.png"
+                    width={36}
+                    height={36}
+                    alt="Avatar"
+                    className="overflow-hidden rounded-full"
+                    />
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            </div>
             <div className="max-w-7xl mx-auto p-8 sm:p-12 md:p-16">
-                <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-                    <h2 className="text-4xl font-extrabold text-center mb-8">Create a New Event</h2>
+                <div className="bg-black p-8 rounded-lg shadow-lg">
+                    <h2 className="text-4xl font-extrabold text-white text-center mb-8">Create new event</h2>
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
@@ -204,7 +252,7 @@ const CreateEvent: React.FC = () => {
                                     name="eventName"
                                     value={formData.eventName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                 />
                                 {errors.eventName && <p className="text-red-500 text-sm">{errors.eventName}</p>}
                             </div>
@@ -212,7 +260,7 @@ const CreateEvent: React.FC = () => {
                             <div>
                                 <label className="block text-gray-300 text-sm font-bold mb-2">Event Category</label>
                                 <Select value={formData.eventCategory} onValueChange={handleCategoryChange}>
-                                <SelectTrigger className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black">
+                                <SelectTrigger className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white">
                                     <SelectValue placeholder="Select a category" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -235,7 +283,7 @@ const CreateEvent: React.FC = () => {
                                     name="eventDescription"
                                     value={formData.eventDescription}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                     rows={4}
                                 />
                                 {errors.eventDescription && <p className="text-red-500 text-sm">{errors.eventDescription}</p>}
@@ -248,7 +296,7 @@ const CreateEvent: React.FC = () => {
                                     name='eventImage' 
                                     onChange={handleFileChange} 
                                     type="file" 
-                                    className='cursor-pointer w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black'
+                                    className='cursor-pointer w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white'
                                     />
                                     {errors.eventImage && <p className="text-red-500 text-sm">{errors.eventImage}</p>}
                                 </div>                                
@@ -261,7 +309,7 @@ const CreateEvent: React.FC = () => {
                                     name='eventVideo' 
                                     onChange={handleFileChange} 
                                     type="file" 
-                                    className='cursor-pointer w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black'
+                                    className='cursor-pointer w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white'
                                     />
                                 </div>
                             </div>
@@ -273,7 +321,7 @@ const CreateEvent: React.FC = () => {
                                     name="eventPrice"
                                     value={formData.eventPrice}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                 />
                                 {errors.eventPrice && <p className="text-red-500 text-sm">{errors.eventPrice}</p>}
                             </div>
@@ -308,7 +356,7 @@ const CreateEvent: React.FC = () => {
                                     name="eventTime"
                                     value={formData.eventDate ? format(new Date(formData.eventDate), "HH:mm") : ''}
                                     onChange={(e) => handleTimeChange(e.target.value)}
-                                    className="w-36 mt-4 sm:mt-0 px-3 py-1 cursor-pointer text-gray-100 bg-gray-500 hover:bg-gray-700 border-0 rounded-lg shadow-lg focus:outline-none focus:ring-1 focus:ring-black"
+                                    className="w-36 mt-4 sm:mt-0 px-3 py-1 cursor-pointer text-gray-100 bg-gray-500 hover:bg-gray-700 border-0 rounded-lg shadow-lg focus:outline-none focus:ring-1 focus:ring-white"
                                     style={{ WebkitAppearance: 'none', MozAppearance: 'textfield' }}
                                 />
                                 {errors.eventDate && <p className="text-red-500 text-sm">{errors.eventDate}</p>}
@@ -321,7 +369,7 @@ const CreateEvent: React.FC = () => {
                                     name="addressLocation"
                                     value={formData.addressLocation}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                 />
                                 {errors.addressLocation && <p className="text-red-500 text-sm">{errors.addressLocation}</p>}
                             </div>
@@ -333,7 +381,7 @@ const CreateEvent: React.FC = () => {
                                     name="googleMapsUrl"
                                     value={formData.googleMapsUrl}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                 />
                                 {errors.googleMapsUrl && <p className="text-red-500 text-sm">{errors.googleMapsUrl}</p>}
                             </div>
@@ -345,7 +393,7 @@ const CreateEvent: React.FC = () => {
                                     name="totalTickets"
                                     value={formData.totalTickets}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-white"
                                 />
                                 {errors.totalTickets && <p className="text-red-500 text-sm">{errors.totalTickets}</p>}
                             </div>
@@ -354,7 +402,7 @@ const CreateEvent: React.FC = () => {
                         <div className="mt-8 flex justify-center">
                             <button
                                 type="submit"
-                                className="bg-transparent hover:bg-black text-white border border-white hover:border-black shadow-md font-bold py-3 px-6 rounded-md focus:outline-none transition duration-300"
+                                className="bg-transparent hover:bg-white hover:text-black text-white border border-white hover:border-black shadow-md font-bold py-3 px-6 rounded-md focus:outline-none transition duration-300"
                             >
                                 Create Event
                             </button>

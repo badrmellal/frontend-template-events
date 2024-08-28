@@ -1,16 +1,16 @@
 "use client";
 
+import { useToast } from "@/components/ui/use-toast";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
 
 interface CustomJwtPayload {
   authorities: string[],
   exp: number
 }
 
-const useAdminAuth = () => {
+const usePublisherAuth = () => {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const { toast } = useToast();
@@ -23,20 +23,19 @@ const useAdminAuth = () => {
       const decodedToken = jwtDecode<CustomJwtPayload>(token);
       const userAuthorities = decodedToken.authorities;
       const tokenExpirationDate = new Date(decodedToken.exp * 1000);
-      
       if(tokenExpirationDate < new Date()){
-              toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Your session has expired. Please login again.",
-                })
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Your session has expired. Please login again.",
+          })
         setTimeout(()=> {
           router.push("/login")
-        }, 2000);
-        return; 
+        }, 2000)
+        return;
       }
 
-      if (userAuthorities.includes("user:delete")) {
+      if (userAuthorities.includes("event:create")) {
         setIsAuthorized(true);
       } else {
         router.push("/access-denied");
@@ -50,4 +49,4 @@ const useAdminAuth = () => {
   return isAuthorized;
 };
 
-export default useAdminAuth;
+export default usePublisherAuth;

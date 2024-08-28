@@ -1,6 +1,11 @@
 "use client"
 
+import SidebarUser from "@/app/components/sidebar-user";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import axios from "axios";
+import { Headset, LogOut } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -32,8 +37,39 @@ const Home = () =>{
         }
     }, [router])
 
+    const handleLogOut = () => {
+        localStorage.removeItem("token");
+        window.location.reload();
+    }
+
     return(
         <div className="min-h-screen flex items-center justify-center bg-black">
+            <SidebarUser />
+            <div className="absolute top-3 right-3">
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="overflow-hidden rounded-full"
+                >
+                    <Image
+                    src="/profile_avatar.png"
+                    width={36}
+                    height={36}
+                    alt="Avatar"
+                    className="overflow-hidden rounded-full"
+                    />
+                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            </div>
         {eventList ? (
                 <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
                     <h2 className="text-3xl font-semibold text-center text-gray-800">

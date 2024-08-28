@@ -10,7 +10,7 @@ const DashboardAdminPage: React.FC = () => {
   if (!isAuthorized) {
     return null;
   }
-  return <DashboardAdmin />;
+  return <DashboardAdmin />
 };
 
 export default DashboardAdminPage;

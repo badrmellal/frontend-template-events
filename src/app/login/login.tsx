@@ -16,6 +16,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState("");
   const [disabled, setDisabled] = useState(true);
   const [dirty, setDirty] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string}>({})
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error";
@@ -27,35 +28,21 @@ const Login: React.FC = () => {
   };
 
   const handleValidation = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
     const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password);
 
     if (dirty) {
       if (!validateEmail(email)) {
-        setNotification({
-          message: "Please enter a valid email address.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.email = "Please enter a valid email address.";
       }
       if (password.length < 7) {
-        setNotification({
-          message: "Password must be at least 7 characters long.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.password = "Password must be at least 7 characters long.";
       }
       if (!validPassword) {
-        setNotification({
-          message: "Password must contain both letters and numbers.",
-          type: "error",
-        });
-        setDisabled(true);
-        return;
+        newErrors.password = "Password must contain both letters and numbers.";
       }
-      setDisabled(false);
-      setNotification(null);
+      setErrors(newErrors);
+      setDisabled(Object.keys(newErrors).length > 0);
     }
   }, [email, password, dirty]);
 
@@ -90,24 +77,22 @@ const Login: React.FC = () => {
         const decodedToken = jwtDecode<CustomJwtPayload>(response.data);
         const userAuthorities = decodedToken.authorities;
 
-        if (
+        if (userAuthorities.includes("user:delete")) {
+          router.push("/admin/dashboard");
+      } else if (
+          userAuthorities.includes("event:create") &&
+          userAuthorities.includes("event:update")
+      ) {
+          router.push("/publisher/dashboard");
+      } else if (
           userAuthorities.includes("user:read") &&
           userAuthorities.includes("event:read")
-        ) {
-          if (
-            userAuthorities.includes("event:create") &&
-            userAuthorities.includes("event:update")
-          ) {
-            router.push("/publisher/dashboard");
-          } else {
-            router.push("/user/dashboard");
-          }
-        } else if (userAuthorities.includes("user:delete")) {
-          router.push("/admin/dashboard");
-        } else {
+      ) {
+          router.push("/user/dashboard");
+      } else {
           router.push("/access-denied");
-        }
       }
+    }
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const status = err.response?.status;
@@ -138,9 +123,10 @@ const Login: React.FC = () => {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="bg-white z-10 p-8 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md"
       >
-        <h2 className="text-3xl font-semibold mb-8 text-center font-montserrat text-gray-800">
-          Login to your account
+        <h2 className="text-3xl font-semibold mb-4 text-left font-montserrat text-gray-800">
+          Login
         </h2>
+        <p className="text-sm font-medium mb-8 text-left text-gray-500">Welcome back to your account</p>
         <form onSubmit={handleSubmit}>
           <div className="mb-5 mt-3 relative">
             <input
@@ -161,6 +147,7 @@ const Login: React.FC = () => {
             >
               Email
             </label>
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
           <div className="mb-5 mt-3 relative">
             <input
@@ -181,6 +168,7 @@ const Login: React.FC = () => {
             >
               Password
             </label>
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
           </div>
           <div className="flex items-center justify-between">
             <motion.button
