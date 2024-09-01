@@ -37,14 +37,15 @@ const OrSeparator = () => (
 );
 
 export default function TabsAuth() {
-  const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const router = useRouter();
-  const [usernameField, setUsernameField] = useState("");
-  const [emailField, setEmailField] = useState("");
-  const [passwordField, setPasswordField] = useState("");
-  const [roleField, setRoleField] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState('');
   const [disabled, setDisabled] = useState(true);
   const [googleAppleDisabled, setGoogleAppleDisabled] = useState(true);
   const [dirty, setDirty] = useState(false);
@@ -56,60 +57,63 @@ export default function TabsAuth() {
     { label: "I want to publish an event", value: "ROLE_PUBLISHER" },
   ];
 
-  const validateEmail = (emailField: string) => {
+  const validateEmail = (email: string) => {
     const req = /\S+@\S+\.\S+/;
-    return req.test(emailField);
+    return req.test(email);
   };
 
   const handleValidation = useCallback(() => {
     const newErrors: { [key: string]: string } = {};
-    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(passwordField);
+    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password);
 
     if (dirty) {
-      if (!validateEmail(emailField)) {
-        newErrors.emailField = "Please enter a valid email address.";
+      if (!validateEmail(email)) {
+        newErrors.email = "Please enter a valid email address.";
       }
-      if (passwordField.length < 7) {
-        newErrors.passwordField = "Password must be at least 7 characters long.";
+      if (password.length < 7) {
+        newErrors.password = "Password must be at least 7 characters long.";
       }
       if (!validPassword) {
-        newErrors.passwordField = "Password must contain both letters and numbers.";
+        newErrors.password = "Password must contain both letters and numbers.";
       }
-      if (!roleField) {
-        newErrors.roleField = "Please select the account type.";
+      if (!role) {
+        newErrors.role = "Please select the account type.";
+      }
+      if (!termsAccepted) {
+        newErrors.terms = "You must accept the terms and conditions.";
       }
       setErrors(newErrors);
       setDisabled(Object.keys(newErrors).length > 0);
     }
-  }, [emailField, passwordField, dirty, roleField]);
+  }, [email, password, dirty, role, termsAccepted]);
 
   useEffect(() => {
-    if (!roleField) {
+    if (!role) {
       setGoogleAppleDisabled(true);
       setErrors((prevErrors) => ({
         ...prevErrors,
-        roleField: "Please select the account type first.",
+        role: "Please select the account type first.",
       }));
       return;
     }
     setGoogleAppleDisabled(false);
     setErrors((prevErrors) => {
-      const { roleField, ...rest } = prevErrors;
+      const { role, ...rest } = prevErrors;
       return rest;
     });
-  }, [roleField]);
+  }, [role]);
 
   useEffect(() => {
     handleValidation();
   }, [handleValidation]);
 
-  const handlePasswordChange = (e: any) => {
-    setPasswordField(e.target.value);
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
     validatePassword(e.target.value, confirmPass)
   }
-  const handleConfirmPasswordChange = (e: any) =>{
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) =>{
     setConfirmPass(e.target.value);
-    validatePassword(passwordField, e.target.value)
+    validatePassword(password, e.target.value)
   }
   const validatePassword = (pass: string, confirmPass: string) =>{
     if(pass != confirmPass){
@@ -119,12 +123,27 @@ export default function TabsAuth() {
     }
   }
 
+  const handleSocialSignup = (provider: string) => {
+    if (!termsAccepted) {
+      setTermsError("You must accept the terms and conditions.");
+      return;
+    }
+    // Logic for social sign up (Google or Apple) later
+    console.log(`Signing up with ${provider}`);
+  };
+
+  
   const handleSubmitSignup = async(e: React.FormEvent) => {
     e.preventDefault();
+    if (!termsAccepted) {
+      setTermsError("You must accept the terms and conditions.");
+      return;
+    }
+
     try {
       const response = await axios.post(
         "http://localhost:8080/user/register",
-        new URLSearchParams({ usernameField, emailField, passwordField, roleField }),
+        new URLSearchParams({ username, email, password, role }),
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -133,10 +152,10 @@ export default function TabsAuth() {
       );
 
       if (response.status === 201) {
-        setUsernameField("");
-        setEmailField("");
-        setPasswordField("");
-        setRoleField("");
+        setUsername("");
+        setEmail("");
+        setPassword("");
+        setRole("");
         toast({ 
           title: "Login to continue!",
         })
@@ -190,22 +209,33 @@ export default function TabsAuth() {
           
             <div className="space-y-1">
               <Label htmlFor="username">Username</Label>
-              <Input id="username" value={usernameField} onChange={(e)=> setUsernameField(e.target.value)} defaultValue="@badrmel" type="text" required />
+              <Input id="username" value={username} 
+              onChange={(e)=> setUsername(e.target.value)} defaultValue="@badrmel" type="text" required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" value={emailField} onChange={(e)=> setEmailField(e.target.value)} defaultValue="example@email.com" type="email" required />
+              <Input id="email" value={email} 
+              onChange={(e)=> {
+                setEmail(e.target.value)
+                setDirty(true)
+              }} 
+              defaultValue="example@email.com" type="email" required />
             </div>
-            {errors.emailField && <p className="text-red-500 text-sm">{errors.emailField}</p>}
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             <div className="space-y-1">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required value={passwordField} onChange={handlePasswordChange} />
+              <Input id="password" type="password" required value={password} 
+              onChange={(e) => {
+                handlePasswordChange(e)
+                setDirty(true)
+              }} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="passwordconfirm">Confirm password</Label>
-              <Input id="passwordconfirm" type="password" required value={confirmPass} onChange={handleConfirmPasswordChange} />
+              <Input id="passwordconfirm" type="password" required value={confirmPass} 
+              onChange={handleConfirmPasswordChange} />
             </div>
-            {errors.passwordField && <p className="text-red-500 text-sm">{errors.passwordField}</p>}
+            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             {passwordError && <span className="mt-2 text-red-500 text-sm">{passwordError}</span>}
             <div className="py-6">
             <label className="block text-gray-700 font-montserrat text-sm font-semibold mb-2" htmlFor="role">
@@ -213,14 +243,22 @@ export default function TabsAuth() {
             </label>
             <DropdownAuth
               options={roles}
-              selectedValue={roleField}
-              onChange={(value) => setRoleField(value)}
+              selectedValue={role}
+              onChange={(value) => setRole(value)}
             />
-            {errors.roleField && <p className="text-red-500 mt-1 text-sm">{errors.roleField}</p>}
+            {errors.role && <p className="text-red-500 mt-1 text-sm">{errors.role}</p>}
           </div>
             <div className="pt-3">
             <div className="items-top flex space-x-2">
-              <Checkbox className="rounded" required id="terms1" />
+            <Checkbox 
+                  className="rounded" 
+                  id="terms1" 
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => {
+                    setTermsAccepted(checked as boolean);
+                    setTermsError('');
+                  }}
+                />
               <div className="grid gap-1.5 leading-none">
                 <label
                   htmlFor="terms1"
@@ -233,14 +271,21 @@ export default function TabsAuth() {
                 </p>
               </div>
             </div>
+            {termsError && <p className="text-red-500 text-sm mt-2">{termsError}</p>}
+
             </div>
            
           </CardContent>
           <CardFooter className="flex justify-end space-x-3">
             <Button variant="secondary">Cancel</Button>
             <Button type="submit"
-             className={`${passwordError !== '' ? "bg-gray-300 cursor-not-allowed" : "bg-gray-900 hover:bg-gray-700"}`}
-             disabled={passwordError !== ''}
+              className={`${
+                disabled || passwordError !== '' || !role 
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-gray-900 hover:bg-gray-700"
+              }`}
+             disabled={disabled || !role ||  passwordError !== ''}
+             
             >
             Submit
             </Button>
@@ -249,10 +294,15 @@ export default function TabsAuth() {
           <div className="flex items-center justify-center">
             <motion.button
               type="button"
+              disabled={googleAppleDisabled}
+              onClick={() => handleSocialSignup('Google')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.15, ease:"easeInOut"}}
-              className="w-full max-w-[260px] mt-3 bg-transparent text-black border border-black hover:bg-black hover:text-white font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out"
+              className={`w-full max-w-[260px] mt-3 ${googleAppleDisabled
+                ? "bg-gray-900 text-white cursor-not-allowed"
+                : "bg-transparent text-black border border-black hover:bg-black hover:text-white"
+                } font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out`}
             >
               <div className="flex justify-center items-center">
                 <FcGoogle className="h-6 w-6 mx-4" />
@@ -263,10 +313,15 @@ export default function TabsAuth() {
           <div className="flex mb-6 justify-center items-center">
             <motion.button
               type="button"
+              disabled={googleAppleDisabled }
+              onClick={() => handleSocialSignup('Apple')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.15, ease:"easeInOut"}}
-              className="w-full max-w-[260px] my-3 bg-transparent text-black border border-black hover:bg-black hover:text-white font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out"
+              className={`w-full max-w-[260px] mt-3 ${googleAppleDisabled 
+                ? "bg-gray-900 text-white cursor-not-allowed"
+                : "bg-transparent text-black border border-black hover:bg-black hover:text-white"
+                } font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out`}
             >
               <div className="flex justify-center items-center">
                 <FaApple className="h-6 w-6 mx-4" />

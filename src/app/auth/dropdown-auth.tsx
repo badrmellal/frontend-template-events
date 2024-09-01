@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface DropdownProps {
     options: {label: string, value: string}[];
@@ -9,7 +9,8 @@ interface DropdownProps {
 const DropdownAuth: React.FC<DropdownProps> = ({options, selectedValue, onChange}) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleSelect = (value: string) => {
+    const handleSelect = (e: React.MouseEvent<HTMLAnchorElement>, value: string) => {
+        e.preventDefault();
         onChange(value);
         setIsOpen(false);
     }
@@ -44,7 +45,7 @@ const DropdownAuth: React.FC<DropdownProps> = ({options, selectedValue, onChange
                         {options.map(option => (
                             <a key={option.value}
                             href="#"
-                            onClick={() => handleSelect(option.value)}
+                            onClick={(e) => handleSelect(e, option.value)}
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
                                 {option.label}
