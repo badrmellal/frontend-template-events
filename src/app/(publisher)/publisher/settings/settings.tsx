@@ -10,7 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDownIcon, Headset, LogOut } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ChevronDownIcon, CreditCard, Facebook, Globe, Headset, Instagram, LogOut, PlusCircle, Trash2, Twitter } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
@@ -29,6 +30,16 @@ const africanCountries = [
     { code: 'TN', dial_code: '+216', name: 'Tunisia' },
   ];
 
+  const socialPlatforms = [
+    { value: 'facebook', label: 'Facebook', icon: Facebook },
+    { value: 'instagram', label: 'Instagram', icon: Instagram },
+    { value: 'website', label: 'Website', icon: Globe },
+  ];
+
+  interface SocialLink{
+    url: string,
+    platform: string
+  }
 
 const SettingPublisher: React.FC = () => {
     const [payoutFrequency, setPayoutFrequency] = useState('monthly');
@@ -36,8 +47,25 @@ const SettingPublisher: React.FC = () => {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [selectedCountry, setSelectedCountry] = useState(africanCountries[0])
     const [phoneNumber, setPhoneNumber] = useState('')
+    const [savedPayoutMethod, setSavedPayoutMethod] = useState({ type: 'bank_transfer', details: '**** 1234' });
     const inputRef = useRef<HTMLInputElement>(null)
 
+    const [socialLinks, setSocialLinks] = useState<SocialLink[]>([{ platform: '', url: '' }]);
+    const addSocialLink = () => {
+        setSocialLinks([...socialLinks, { platform: '', url: '' }]);
+      };
+    
+      const removeSocialLink = (index: number) => {
+        const newLinks = socialLinks.filter((_, i) => i !== index);
+        setSocialLinks(newLinks);
+      };
+    
+      const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
+        const newLinks = [...socialLinks];
+        newLinks[index][field] = value;
+        setSocialLinks(newLinks);
+      };
+    
 
     useEffect(() => {
         if (inputRef.current) {
@@ -106,7 +134,7 @@ const SettingPublisher: React.FC = () => {
               <TabsTrigger value="notifications">Notifications</TabsTrigger>
             </TabsList>
             <TabsContent value="basic-info">
-              <Card className="w-full">
+              <Card className="w-full mb-10">
                 <CardHeader>
                   <CardTitle>Basic Info</CardTitle>
                   <CardDescription>
@@ -135,7 +163,7 @@ const SettingPublisher: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="username">Username</Label>
-                    <Input id="username" defaultValue="Badr Mellal" />
+                    <Input disabled id="username" defaultValue="Badr Mellal" />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="email">Email</Label>
@@ -179,6 +207,59 @@ const SettingPublisher: React.FC = () => {
                       className="flex-grow"
                     />
                   </div>
+                  <div className="space-y-1">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    placeholder="Tell your customers about yourself or your organisation and your events..."
+                  />
+                </div>
+                <div className="space-y-4">
+                    <Label>Social Links</Label>
+                    {socialLinks.map((link, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                        <Select
+                            value={link.platform}
+                            onValueChange={(value) => updateSocialLink(index, 'platform', value)}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {socialPlatforms.map((platform) => (
+                                <SelectItem key={platform.value} value={platform.value}>
+                                <div className="flex items-center">
+                                    <platform.icon className="w-4 h-4 mr-2" />
+                                    {platform.label}
+                                </div>
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <Input
+                            placeholder="Enter URL"
+                            value={link.url}
+                            onChange={(e) => updateSocialLink(index, 'url', e.target.value)}
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeSocialLink(index)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                        </div>
+                    ))}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addSocialLink}
+                        className="mt-2"
+                    >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        Add Social Link
+                    </Button>
+                    </div>
                 </CardContent>
                 <CardFooter>
                   <Button>Save changes</Button>
@@ -227,6 +308,24 @@ const SettingPublisher: React.FC = () => {
           <Button className="w-full">Save Payout Settings</Button>
         </CardFooter>
       </Card>
+      <Card className="mt-6 mb-10">
+              <CardHeader>
+                <CardTitle>Saved Payout Method</CardTitle>
+                <CardDescription>Your default payout method</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4">
+                  <CreditCard className="h-6 w-6 text-gray-400" />
+                  <div>
+                    <p className="font-medium">{savedPayoutMethod.type === 'bank_transfer' ? 'Bank Transfer' : savedPayoutMethod.type}</p>
+                    <p className="text-sm text-gray-500">{savedPayoutMethod.details}</p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button variant="outline" className="w-full">Update Payout Method</Button>
+              </CardFooter>
+            </Card>
             </TabsContent>
             <TabsContent value="activity">
               <Card className="w-full">
