@@ -234,7 +234,7 @@ export default function TabsAuth() {
               <Label htmlFor="passwordconfirm">Confirm password</Label>
               <Input id="passwordconfirm" type="password" required value={confirmPass} 
               onChange={handleConfirmPasswordChange} />
-            </div>
+            </div> 
             {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             {passwordError && <span className="mt-2 text-red-500 text-sm">{passwordError}</span>}
             <div className="py-6">

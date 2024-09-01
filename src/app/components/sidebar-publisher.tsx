@@ -27,14 +27,14 @@ export default function SidebarPublisher() {
               Africa Events
             </Link>
             <Link
-              href="#"
+              href="/publisher/dashboard"
               className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
             >
               <Home className="h-5 w-5" />
               Dashboard
             </Link>
             <Link
-              href="#"
+              href="/my-events"
               className="flex items-center gap-4 text-foreground"
             >
               <PartyPopper className="h-5 w-5" />
@@ -55,7 +55,7 @@ export default function SidebarPublisher() {
               Analytics
             </Link>
             <Link
-              href="#"
+              href="/publisher/settings"
               className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-5 w-5" />
@@ -76,7 +76,7 @@ export default function SidebarPublisher() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                href="#"
+                href="/publisher/dashboard"
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
               >
                 <Home className="h-5 w-5" />
@@ -89,7 +89,7 @@ export default function SidebarPublisher() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                href="#"
+                href="/publisher/my-events"
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
               >
                 <PartyPopper className="h-5 w-5" />
@@ -127,7 +127,7 @@ export default function SidebarPublisher() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
-                href="#"
+                href="/publisher/settings"
                 className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
               >
                 <Settings className="h-5 w-5" />

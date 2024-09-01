@@ -175,7 +175,7 @@ const CreateEvent: React.FC = () => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            if (response.status === 201){
+            if (response.status === 200){
                 toast({
                     title: "Event created successfully!",
                     description: "Congratulation on publishing a new event."
