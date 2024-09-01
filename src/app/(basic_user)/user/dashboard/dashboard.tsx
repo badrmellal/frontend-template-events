@@ -1,5 +1,6 @@
 "use client"
 
+import TabsAuth from "@/app/auth/auth";
 import SidebarUser from "@/app/components/sidebar-user";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -70,8 +71,10 @@ const Home = () =>{
                 </DropdownMenuContent>
             </DropdownMenu>
             </div>
+            <div className="flex flex-col py-14 mt-8 space-y-4 justify-center items-center">
+                <TabsAuth />
         {eventList ? (
-                <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+            <div className="bg-white p-8 mt-8 rounded-lg shadow-lg w-full max-w-sm">
                     <h2 className="text-3xl font-semibold text-center text-gray-800">
                          Welcome Home User
                     </h2>
@@ -81,9 +84,10 @@ const Home = () =>{
                 <div>
                     <p className="text-white text-3xl font-montserrat font-semibold">Loading...</p>
                 </div>
-            ) 
-            
-            }
+            )             
+        }
+            </div>
+
         </div>
     )
 }

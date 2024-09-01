@@ -1,5 +1,5 @@
 import SidebarUser from "@/app/components/sidebar-user";
-import React, { useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -22,7 +22,25 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
-import { CreditCard, Headset, LogOut } from "lucide-react";
+import { ChevronDownIcon, CreditCard, Headset, LogOut } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
+import ReactCountryFlag from "react-country-flag"
+
+
+const africanCountries = [
+  { code: 'EG', dial_code: '+20', name: 'Egypt' },
+  { code: 'NG', dial_code: '+234', name: 'Nigeria' },
+  { code: 'KE', dial_code: '+254', name: 'Kenya' },
+  { code: 'ZA', dial_code: '+27', name: 'South Africa' },
+  { code: 'GH', dial_code: '+233', name: 'Ghana' },
+  { code: 'ET', dial_code: '+251', name: 'Ethiopia' },
+  { code: 'TZ', dial_code: '+255', name: 'Tanzania' },
+  { code: 'MA', dial_code: '+212', name: 'Morocco' },
+  { code: 'DZ', dial_code: '+213', name: 'Algeria' },
+  { code: 'TN', dial_code: '+216', name: 'Tunisia' },
+];
+
 
 const RegisteredCard = () => {
   return (
@@ -86,12 +104,31 @@ const AddCard = () => {
   )
 }
 
+
 const Settings: React.FC = () => {
 
   const [profileImage, setProfileImage] = useState("/profile_avatar.png")
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [hasRegisteredCard, setHasRegisteredCard] = useState(true)
+  const [selectedCountry, setSelectedCountry] = useState(africanCountries[0])
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [selectedCountry])
+
+  const handleCountrySelect = (country: typeof selectedCountry) => {
+    setSelectedCountry(country);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '')
+    setPhoneNumber(value)
+  }
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -176,6 +213,44 @@ const Settings: React.FC = () => {
                 <div className="space-y-1">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" defaultValue="badr@example.com" disabled />
+                </div>
+                <div className="flex w-full max-w-sm items-center space-x-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={false}
+                        className="w-[120px] justify-between"
+                      >
+                        <ReactCountryFlag countryCode={selectedCountry.code} svg />
+                        <span className="ml-2">{selectedCountry.dial_code}</span>
+                        <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <div className="py-1">
+                        {africanCountries.map((country) => (
+                          <button
+                            key={country.code}
+                            onClick={() => handleCountrySelect(country)}
+                            className="w-full text-left px-2 py-1 hover:bg-gray-100 flex items-center"
+                          >
+                            <ReactCountryFlag countryCode={country.code} svg className="mr-2" />
+                            {country.name} ({country.dial_code})
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <Input
+                    ref={inputRef}
+                    type="tel"
+                    placeholder="Phone number"
+                    value={phoneNumber}
+                    onChange={handlePhoneChange}
+                    className="flex-grow"
+                  />
                 </div>
               </CardContent>
               <CardFooter>
