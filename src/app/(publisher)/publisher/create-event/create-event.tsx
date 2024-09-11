@@ -1,9 +1,9 @@
 "use client"
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { format, set } from "date-fns";
-import { Calendar as CalendarIcon, Headset, LogOut, Plus, Upload, X } from "lucide-react"; 
+import { Calendar as CalendarIcon, Headset, LogOut, Plus, Tag, Ticket, Upload, X } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,7 +23,7 @@ import Image from 'next/image';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency, africanCountries } from '@/app/api/currency/route';
+import { formatCurrency, africanCountries, getCurrencyByCountryCode } from '@/app/api/currency/route';
 import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
 
@@ -34,7 +34,7 @@ interface EventFormInputs {
     eventImages: File[];
     eventVideo?: File | null;
     isFreeEvent: boolean;
-    eventPrice: number;
+    eventCountry: string;
     eventCurrency: string;
     eventDate: Date | undefined;
     eventTime: string;
@@ -47,7 +47,9 @@ interface EventFormInputs {
 interface TicketType {
     name: string;
     price: number;
+    currency: string;
     totalTickets: number;
+    isFree: boolean;
 }
 
 const eventCategories = [
@@ -70,25 +72,34 @@ const CreateEvent: React.FC = () => {
         eventImages: [],
         eventVideo: null,
         isFreeEvent: false,
-        eventPrice: 0,
-        eventCurrency: 'MA',
+        eventCurrency: '',
+        eventCountry: '',
         eventDate: undefined,
         eventTime: '',
         addressLocation: '',
         googleMapsUrl: '',
-        ticketTypes: [{ name: 'General Admission', price: 0, totalTickets: 0 }]
+        ticketTypes: [{ name: 'General Admission', price: 0, currency: 'MA', totalTickets: 0, isFree: true }]
     });
     const [isTokenExpired, setIsTokenExpired] = useState(false);
     const { toast } = useToast();
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [previewImages, setPreviewImages] = useState<string[]>([]);
 
-    const handleCurrencyChange = (value: string) =>{
-        setFormData((prev)=> ({
-            ...prev,
-            eventCurrency: value
-        }))
-    }
+
+    const handleCountryChange = (value: string) => {
+        const currency = getCurrencyByCountryCode(value);
+        if (currency) {
+            setFormData(prev => ({
+                ...prev,
+                eventCountry: value,
+                eventCurrency: currency.code,
+                ticketTypes: prev.ticketTypes.map(ticket => ({
+                    ...ticket,
+                    currency: currency.code
+                }))
+            }));
+        }
+    };
 
     const handleCategoryChange = (value: string) => {
         setFormData(prevState => ({
@@ -112,12 +123,16 @@ const CreateEvent: React.FC = () => {
         }));
     };
     
-    const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string | number) => {
+    const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string | number | boolean) => {
         const updatedTicketTypes = [...formData.ticketTypes];
         updatedTicketTypes[index] = { 
             ...updatedTicketTypes[index], 
-            [field]: field === 'price' || field === 'totalTickets' ? Number(value) : value 
+            [field]: field === 'price' || field === 'totalTickets' ? Number(value) : value,
+            currency: formData.eventCurrency // to ensure currency is always synced with event currency
         };
+        if (field === 'isFree') {
+            updatedTicketTypes[index].price = value ? 0 : updatedTicketTypes[index].price;
+        }
         setFormData(prevState => ({
             ...prevState,
             ticketTypes: updatedTicketTypes
@@ -127,7 +142,7 @@ const CreateEvent: React.FC = () => {
     const addTicketType = () => {
         setFormData(prevState => ({
             ...prevState,
-            ticketTypes: [...prevState.ticketTypes, { name: '', price: 0, totalTickets: 0 }]
+            ticketTypes: [...prevState.ticketTypes, { name: '', price: 0, currency: 'MA', totalTickets: 0, isFree: false }]
         }));
     };
 
@@ -174,7 +189,11 @@ const CreateEvent: React.FC = () => {
         setFormData(prevState => ({
             ...prevState,
             isFreeEvent: checked,
-            eventPrice: checked ? 0 : prevState.eventPrice,
+            ticketTypes: prevState.ticketTypes.map(ticket => ({
+                ...ticket,
+                isFree: checked,
+                price: checked ? 0 : ticket.price
+            }))
         }));
     };
 
@@ -186,10 +205,7 @@ const CreateEvent: React.FC = () => {
         if (!formData.eventCategory) newErrors.eventCategory = "Event category is required.";
         if (!formData.eventDescription.trim()) newErrors.eventDescription = "Event description is required.";
         if (formData.eventImages.length === 0) newErrors.eventImages = "At least one event image is required.";
-        if (!formData.isFreeEvent) {
-            if (formData.eventPrice <= 0) newErrors.eventPrice = "Event price must be greater than zero for paid events.";
-            if (!formData.eventCurrency) newErrors.eventCurrency = "Please select a currency for paid events.";
-        }
+        if (!formData.eventCountry) newErrors.eventCountry = "Please select a country for the event.";
         if (!formData.eventDate) {
             newErrors.eventDate = "Event date and time are required.";
         } else if (formData.eventDate < new Date()) {
@@ -206,13 +222,25 @@ const CreateEvent: React.FC = () => {
         } else {
             formData.ticketTypes.forEach((ticketType, index) => {
                 if (!ticketType.name) newErrors[`ticketType${index}Name`] = "Ticket type name is required.";
-                if (ticketType.price < 0) newErrors[`ticketType${index}Price`] = "Price cannot be negative.";
+                if (!ticketType.isFree && ticketType.price <= 0) newErrors[`ticketType${index}Price`] = "Price must be greater than zero for paid tickets.";
                 if (ticketType.totalTickets <= 0) newErrors[`ticketType${index}TotalTickets`] = "Total tickets must be greater than zero.";
             });
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
+
+
+    useEffect(() => {
+        if (!formData.eventCountry) {
+            const defaultCountry = africanCountries[0];
+            setFormData(prev => ({
+                ...prev,
+                eventCountry: defaultCountry.code,
+                eventCurrency: defaultCountry.currency.code,
+            }));
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -267,13 +295,13 @@ const CreateEvent: React.FC = () => {
                     eventImages: [],
                     eventVideo: null,
                     isFreeEvent: false,
-                    eventPrice: 0,
-                    eventCurrency: 'MA',
+                    eventCurrency: '',
+                    eventCountry: '',
                     eventDate: undefined,
                     eventTime: '',
                     addressLocation: '',
                     googleMapsUrl: '',
-                    ticketTypes: [{ name: 'General Admission', price: 0, totalTickets: 0 }]
+                    ticketTypes: [{ name: 'General Admission', price: 0, currency: 'MA', totalTickets: 0, isFree: true }]
                 })
                 setPreviewImages([]);
 
@@ -336,312 +364,306 @@ const CreateEvent: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="eventName" className="text-sm font-medium text-gray-700">Event Name</Label>
+                                        <Input
+                                            id="eventName"
+                                            name="eventName"
+                                            value={formData.eventName}
+                                            onChange={handleChange}
+                                            className="w-full"
+                                        />
+                                        {errors.eventName && <p className="text-red-500 text-sm">{errors.eventName}</p>}
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="eventCategory" className="text-sm font-medium text-gray-700">Event Category</Label>
+                                        <Select value={formData.eventCategory} onValueChange={handleCategoryChange}>
+                                            <SelectTrigger id="eventCategory" className="w-full">
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectGroup>
+                                                    <SelectLabel>Categories</SelectLabel>
+                                                    {eventCategories.map((category) => (
+                                                        <SelectItem key={category} value={category}>
+                                                            {category}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectGroup>
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.eventCategory && <p className="text-red-500 text-sm">{errors.eventCategory}</p>}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="eventDescription" className="text-sm font-medium text-gray-700">Event Description</Label>
+                                    <Textarea
+                                        id="eventDescription"
+                                        name="eventDescription"
+                                        value={formData.eventDescription}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 text-gray-700 border rounded-lg"
+                                        rows={4}
+                                    />
+                                    {errors.eventDescription && <p className="text-red-500 text-sm">{errors.eventDescription}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Event Images</Label>
+                                    <div className="grid sm:grid-cols-3 grid-cols-2 gap-4">
+                                        {previewImages.map((preview, index) => (
+                                            <div key={index} className="relative">
+                                                <Image
+                                                    src={preview}
+                                                    alt={`Event image ${index + 1}`}
+                                                    width={200}
+                                                    height={200}
+                                                    className="rounded-lg object-cover w-full h-32"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <label className="flex flex-col items-center justify-center w-full sm:h-32 h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                                                <p className="mb-2 p-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                            </div>
+                                            <input
+                                                id="eventImages"
+                                                name="eventImages"
+                                                type="file"
+                                                className="hidden"
+                                                onChange={handleFileChange}
+                                                multiple
+                                                accept="image/*"
+                                            />
+                                        </label>
+                                    </div>
+                                    {errors.eventImages && <p className="text-red-500 text-sm">{errors.eventImages}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="eventVideo" className="text-sm font-medium text-gray-700">Event Video (optional)</Label>
                                     <Input
-                                        id="eventName"
-                                        name="eventName"
-                                        value={formData.eventName}
+                                        id="eventVideo"
+                                        name="eventVideo"
+                                        type="file"
+                                        onChange={handleFileChange}
+                                        className="w-full"
+                                        accept="video/*"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="eventCountry" className="text-sm font-medium text-gray-700">Select Event Country</Label>
+                                    <Select value={formData.eventCountry} onValueChange={handleCountryChange}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select a country">
+                                                {formData.eventCountry && (
+                                                    <div className="flex items-center">
+                                                        <ReactCountryFlag
+                                                            countryCode={formData.eventCountry}
+                                                            svg
+                                                            style={{
+                                                                width: '1em',
+                                                                height: '1em',
+                                                            }}
+                                                            title={formData.eventCountry}
+                                                        />
+                                                        <span className="ml-2">{africanCountries.find(c => c.code === formData.eventCountry)?.name}</span>
+                                                    </div>
+                                                )}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {africanCountries.map((country) => (
+                                                <SelectItem key={country.code} value={country.code}>
+                                                    <div className="flex items-center">
+                                                        <ReactCountryFlag
+                                                            countryCode={country.code}
+                                                            svg
+                                                            style={{
+                                                                width: '1em',
+                                                                height: '1em',
+                                                            }}
+                                                            title={country.name}
+                                                        />
+                                                        <span className="ml-2">{country.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {errors.eventCountry && <p className="text-red-500 text-sm">{errors.eventCountry}</p>}
+                                </div>
+
+
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium text-gray-700">Event Date and Time</Label>
+                                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-[280px] justify-start text-left font-normal",
+                                                        !formData.eventDate && "text-muted-foreground"
+                                                    )}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {formData.eventDate ? format(formData.eventDate, "PPP") : <span>Pick a date</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={formData.eventDate}
+                                                    onSelect={handleDateChange}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <TimePicker 
+                                            date={formData.eventDate} 
+                                            setDate={(date) => setFormData(prev => ({ ...prev, eventDate: date }))}
+                                        />
+                                    </div>
+                                    {errors.eventDate && <p className="text-red-500 text-sm">{errors.eventDate}</p>}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="addressLocation" className="text-sm font-medium text-gray-700">Address Location</Label>
+                                    <Input
+                                        id="addressLocation"
+                                        name="addressLocation"
+                                        value={formData.addressLocation}
                                         onChange={handleChange}
                                         className="w-full"
                                     />
-                                    {errors.eventName && <p className="text-red-500 text-sm">{errors.eventName}</p>}
+                                    {errors.addressLocation && <p className="text-red-500 text-sm">{errors.addressLocation}</p>}
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="eventCategory" className="text-sm font-medium text-gray-700">Event Category</Label>
-                                    <Select value={formData.eventCategory} onValueChange={handleCategoryChange}>
-                                        <SelectTrigger id="eventCategory" className="w-full">
-                                            <SelectValue placeholder="Select a category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectGroup>
-                                                <SelectLabel>Categories</SelectLabel>
-                                                {eventCategories.map((category) => (
-                                                    <SelectItem key={category} value={category}>
-                                                        {category}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectGroup>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.eventCategory && <p className="text-red-500 text-sm">{errors.eventCategory}</p>}
+                                    <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700">Google Maps URL</Label>
+                                    <Input
+                                        id="googleMapsUrl"
+                                        name="googleMapsUrl"
+                                        value={formData.googleMapsUrl}
+                                        onChange={handleChange}
+                                        className="w-full"
+                                    />
+                                    {errors.googleMapsUrl && <p className="text-red-500 text-sm">{errors.googleMapsUrl}</p>}
                                 </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="eventDescription" className="text-sm font-medium text-gray-700">Event Description</Label>
-                                <Textarea
-                                    id="eventDescription"
-                                    name="eventDescription"
-                                    value={formData.eventDescription}
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 text-gray-700 border rounded-lg"
-                                    rows={4}
-                                />
-                                {errors.eventDescription && <p className="text-red-500 text-sm">{errors.eventDescription}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label className="text-sm font-medium text-gray-700">Event Images</Label>
-                                <div className="grid sm:grid-cols-3 grid-cols-2 gap-4">
-                                    {previewImages.map((preview, index) => (
-                                        <div key={index} className="relative">
-                                            <Image
-                                                src={preview}
-                                                alt={`Event image ${index + 1}`}
-                                                width={200}
-                                                height={200}
-                                                className="rounded-lg object-cover w-full h-32"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => removeImage(index)}
-                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <label className="flex flex-col items-center justify-center w-full sm:h-32 h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            <Upload className="w-8 h-8 mb-4 text-gray-500" />
-                                            <p className="mb-2 p-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                        </div>
-                                        <input
-                                            id="eventImages"
-                                            name="eventImages"
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleFileChange}
-                                            multiple
-                                            accept="image/*"
-                                        />
-                                    </label>
-                                </div>
-                                {errors.eventImages && <p className="text-red-500 text-sm">{errors.eventImages}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="eventVideo" className="text-sm font-medium text-gray-700">Event Video (optional)</Label>
-                                <Input
-                                    id="eventVideo"
-                                    name="eventVideo"
-                                    type="file"
-                                    onChange={handleFileChange}
-                                    className="w-full"
-                                    accept="video/*"
-                                />
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="free-event"
-                                    checked={formData.isFreeEvent}
-                                    onCheckedChange={handleSwitchChange}
-                                />
-                                <Label htmlFor="free-event" className="text-sm font-medium text-gray-700">Free Event</Label>
-                            </div>
-
-                            {!formData.isFreeEvent && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="eventPrice" className="text-sm font-medium text-gray-700">Event Price</Label>
-                                    <div className="flex space-x-2">
-                                        <Select value={formData.eventCurrency} onValueChange={handleCurrencyChange}>
-                                            <SelectTrigger className="w-[120px]">
-                                                <SelectValue placeholder="Currency">
-                                                    {formData.eventCurrency && (
-                                                        <div className="flex items-center">
-                                                            <ReactCountryFlag
-                                                                countryCode={formData.eventCurrency}
-                                                                svg
-                                                                style={{
-                                                                    width: '1em',
-                                                                    height: '1em',
-                                                                }}
-                                                                title={formData.eventCurrency}
-                                                            />
-                                                            <span className="ml-2">{formData.eventCurrency}</span>
-                                                        </div>
-                                                    )}
-                                                </SelectValue>
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {africanCountries.map((country) => (
-                                                    <SelectItem key={country.code} value={country.code}>
-                                                        <div className="flex items-center">
-                                                            <ReactCountryFlag
-                                                                countryCode={country.code}
-                                                                svg
-                                                                style={{
-                                                                    width: '1em',
-                                                                    height: '1em',
-                                                                }}
-                                                                title={country.name}
-                                                            />
-                                                            <span className="ml-2">{country.currency.code}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <Input
-                                            id="eventPrice"
-                                            name="eventPrice"
-                                            type="number"
-                                            value={formData.eventPrice}
-                                            onChange={handleChange}
-                                            className="flex-grow"
-                                            min="0"
-                                            step="0.01"
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            checked={formData.isFreeEvent}
+                                            onCheckedChange={handleSwitchChange}
                                         />
+                                        <Label>Free Event</Label>
                                     </div>
-                                    {errors.eventPrice && <p className="text-red-500 text-sm">{errors.eventPrice}</p>}
-                                    {errors.eventCurrency && <p className="text-red-500 text-sm">{errors.eventCurrency}</p>}
-                                    {formData.eventPrice > 0 && formData.eventCurrency && (
-                                        <p className="text-sm text-gray-600">
-                                            Formatted price: {formatCurrency(formData.eventPrice, formData.eventCurrency)}
-                                        </p>
-                                    )}
+                                    <p className="text-sm text-gray-600">
+                                        {formData.isFreeEvent 
+                                            ? "This is a free event. Attendees can reserve spots without payment." 
+                                            : "This is a paid event. Set up ticket types below."}
+                                    </p>
                                 </div>
-                            )}
 
-                        <div className="space-y-2">
-                                        <Label className="text-sm font-medium text-gray-700">Event Date and Time</Label>
-                                        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant={"outline"}
-                                                        className={cn(
-                                                            "w-[280px] justify-start text-left font-normal",
-                                                            !formData.eventDate && "text-muted-foreground"
-                                                        )}
-                                                    >
-                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {formData.eventDate ? format(formData.eventDate, "PPP") : <span>Pick a date</span>}
+                                <div className="space-y-4">
+                                    <Label className="text-lg font-medium text-gray-700">Ticket Types</Label>
+                                    {formData.ticketTypes.map((ticketType, index) => (
+                                        <div key={index} className="space-y-2 p-4 border rounded-md">
+                                            <div className="flex justify-between items-center">
+                                                <Label className="text-sm font-medium text-gray-700">Ticket Type {index + 1}</Label>
+                                                {index > 0 && (
+                                                    <Button type="button" variant="destructive" size="sm" onClick={() => removeTicketType(index)}>
+                                                        <X className="h-4 w-4" />
                                                     </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={formData.eventDate}
-                                                        onSelect={handleDateChange}
-                                                        initialFocus
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <TimePicker 
-                                                date={formData.eventDate} 
-                                                setDate={(date) => setFormData(prev => ({ ...prev, eventDate: date }))}
+                                                )}
+                                            </div>
+                                            <Input
+                                                placeholder="Ticket Name"
+                                                value={ticketType.name}
+                                                onChange={(e) => handleTicketTypeChange(index, 'name', e.target.value)}
+                                                className="w-full"
                                             />
-                                        </div>
-                                        {errors.eventDate && <p className="text-red-500 text-sm">{errors.eventDate}</p>}
-                        </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="addressLocation" className="text-sm font-medium text-gray-700">Address Location</Label>
-                                <Input
-                                    id="addressLocation"
-                                    name="addressLocation"
-                                    value={formData.addressLocation}
-                                    onChange={handleChange}
-                                    className="w-full"
-                                />
-                                {errors.addressLocation && <p className="text-red-500 text-sm">{errors.addressLocation}</p>}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700">Google Maps URL</Label>
-                                <Input
-                                    id="googleMapsUrl"
-                                    name="googleMapsUrl"
-                                    value={formData.googleMapsUrl}
-                                    onChange={handleChange}
-                                    className="w-full"
-                                />
-                                {errors.googleMapsUrl && <p className="text-red-500 text-sm">{errors.googleMapsUrl}</p>}
-                            </div>
-
-                            <div className="space-y-4">
-                                <Label className="text-lg font-medium text-gray-700">Ticket Types</Label>
-                                {formData.ticketTypes.map((ticketType, index) => (
-                                    <div key={index} className="space-y-2 p-4 border rounded-md">
-                                        <div className="flex justify-between items-center">
-                                            <Label className="text-sm font-medium text-gray-700">Ticket Type {index + 1}</Label>
-                                            {index > 0 && (
-                                                <Button type="button" variant="destructive" size="sm" onClick={() => removeTicketType(index)}>
-                                                    <X className="h-4 w-4" />
-                                                </Button>
+                                            {errors[`ticketType${index}Name`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Name`]}</p>}
+                                            {!formData.isFreeEvent && (
+                                                <div className="flex space-x-2 mt-2">
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="Price"
+                                                        value={ticketType.price}
+                                                        onChange={(e) => handleTicketTypeChange(index, 'price', e.target.value)}
+                                                        className="flex-grow"
+                                                        min="0"
+                                                        step="0.01"
+                                                    />
+                                                </div>
+                                            )}
+                                            {errors[`ticketType${index}Price`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Price`]}</p>}
+                                            <div className="flex items-center space-x-2 mt-2">
+                                                <p className="text-xs text-gray-600">Tickets available</p>
+                                                <Ticket className="h-4 w-4" />
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Total Tickets"
+                                                    value={ticketType.totalTickets}
+                                                    onChange={(e) => handleTicketTypeChange(index, 'totalTickets', e.target.value)}
+                                                    className="flex-grow"
+                                                    min="1"
+                                                />
+                                            </div>
+                                            {errors[`ticketType${index}TotalTickets`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}TotalTickets`]}</p>}
+                                            {!formData.isFreeEvent && ticketType.price > 0 && (
+                                                <p className="text-sm text-gray-600 mt-2">
+                                                    <Tag className="inline-block mr-2 h-4 w-4" />
+                                                    Formatted price: {formatCurrency(ticketType.price, formData.eventCountry)}
+                                                </p>
                                             )}
                                         </div>
-                                        <Input
-                                            placeholder="Ticket Name"
-                                            value={ticketType.name}
-                                            onChange={(e) => handleTicketTypeChange(index, 'name', e.target.value)}
-                                            className="w-full"
-                                        />
-                                        {errors[`ticketType${index}Name`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Name`]}</p>}
-                                        <div className="flex space-x-2">
-                                            <Input
-                                                type="number"
-                                                placeholder="Price"
-                                                value={ticketType.price}
-                                                onChange={(e) => handleTicketTypeChange(index, 'price', e.target.value)}
-                                                className="w-1/2"
-                                                min="0"
-                                                step="0.01"
-                                            />
-                                            <Input
-                                                type="number"
-                                                placeholder="Total Tickets"
-                                                value={ticketType.totalTickets}
-                                                onChange={(e) => handleTicketTypeChange(index, 'totalTickets', e.target.value)}
-                                                className="w-1/2"
-                                                min="1"
-                                            />
-                                        </div>
-                                        {errors[`ticketType${index}Price`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Price`]}</p>}
-                                        {errors[`ticketType${index}TotalTickets`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}TotalTickets`]}</p>}
-                                        {ticketType.price > 0 && formData.eventCurrency && (
-                                            <p className="text-sm text-gray-600">
-                                                Formatted price: {formatCurrency(ticketType.price, formData.eventCurrency)}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                                <Button type="button" onClick={addTicketType} className="w-full mt-2">
-                                    <Plus className="h-4 w-4 mr-2" /> Add Ticket Type
-                                </Button>
-                                {errors.ticketTypes && <p className="text-red-500 text-sm">{errors.ticketTypes}</p>}
-                            </div>
+                                    ))}
+                                    <Button type="button" onClick={addTicketType} className="w-full mt-2">
+                                        <Plus className="h-4 w-4 mr-2" /> Add Ticket Type
+                                    </Button>
+                                    {errors.ticketTypes && <p className="text-red-500 text-sm">{errors.ticketTypes}</p>}
+                                </div>
 
-                            <div className="mt-6">
-                                <Button type="submit" className="w-full">
-                                    Create Event
-                                </Button>
-                            </div>
-                        </form>
-                    </CardContent>
-                </Card>
+                                <div className="mt-6">
+                                    <Button type="submit" className="w-full">
+                                        Create Event
+                                    </Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Dialog open={isTokenExpired} onOpenChange={setIsTokenExpired}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                            <DialogTitle>Token Expired</DialogTitle>
+                            <DialogDescription>
+                                Please login again to continue!
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button type="submit" 
+                                onClick={() => {localStorage.removeItem("token"); window.location.href="/login"; }}
+                            >
+                                Login
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
-
-            <Dialog open={isTokenExpired} onOpenChange={setIsTokenExpired}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Token Expired</DialogTitle>
-                        <DialogDescription>
-                            Please login again to continue!
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button type="submit" 
-                            onClick={() => {localStorage.removeItem("token"); window.location.href="/login"; }}
-                        >
-                            Login
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
     );
 };
 

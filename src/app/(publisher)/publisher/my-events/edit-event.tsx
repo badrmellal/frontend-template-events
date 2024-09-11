@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { format, parseISO, set } from "date-fns";
-import { CalendarIcon, Upload, X } from "lucide-react";
+import { CalendarIcon, Plus, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,15 +24,19 @@ interface Event {
     eventDescription: string;
     eventImages: string[];
     eventVideo: string | null;
-    eventPrice: number;
+    isFreeEvent: boolean;
     eventCurrency: string;
     eventDate: string;
-    isApproved: boolean;
-    isFreeEvent: boolean;
     addressLocation: string;
     googleMapsUrl: string;
+    ticketTypes: TicketType[];
+}
+interface TicketType{
+    name: string;
+    price: number;
+    currency: string;
     totalTickets: number;
-    soldTickets: number;
+    isFree: boolean;
 }
 
 interface EventFormInputs {
@@ -42,13 +46,12 @@ interface EventFormInputs {
     eventImages: string[];
     eventVideo?: string | null;
     isFreeEvent: boolean;
-    eventPrice: number;
     eventCurrency: string;
     eventDate: Date | undefined;
     eventTime: string;
     addressLocation: string;
     googleMapsUrl: string;
-    totalTickets: number;
+    ticketTypes: TicketType[];
 }
 
 const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (updatedEvent: Event, newImages: File[], newVideo? : File) => void }> = ({ event, onClose, onSave }) => {
@@ -59,13 +62,12 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         eventImages: event.eventImages,
         eventVideo: event.eventVideo,
         isFreeEvent: event.isFreeEvent,
-        eventPrice: event.eventPrice,
         eventCurrency: event.eventCurrency,
         eventDate: event.eventDate ? parseISO(event.eventDate) : undefined,
         eventTime: event.eventDate ? format(parseISO(event.eventDate), "HH:mm") : '',
         addressLocation: event.addressLocation,
         googleMapsUrl: event.googleMapsUrl,
-        totalTickets: event.totalTickets
+        ticketTypes: event.ticketTypes
     });
     const [newImages, setNewImages] = useState<File[]>([]);
     const [newVideo, setNewVideo] = useState<File | null>(null);
@@ -79,10 +81,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         if (!formData.eventCategory) newErrors.eventCategory = "Event category is required.";
         if (!formData.eventDescription.trim()) newErrors.eventDescription = "Event description is required.";
         if (formData.eventImages.length === 0 && newImages.length === 0) newErrors.eventImages = "At least one event image is required.";
-        if (!formData.isFreeEvent) {
-            if (formData.eventPrice <= 0) newErrors.eventPrice = "Event price must be greater than zero for paid events.";
-            if (!formData.eventCurrency) newErrors.eventCurrency = "Please select a currency for paid events.";
-        }
+        if (!formData.eventCurrency) newErrors.eventCurrency = "Please select a currency for the event.";
         if (!formData.eventDate) {
             newErrors.eventDate = "Event date and time are required.";
         } else if (formData.eventDate < new Date()) {
@@ -94,7 +93,15 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         } else if (!googleMapsUrlPattern.test(formData.googleMapsUrl)) {
             newErrors.googleMapsUrl = "Please enter a valid Google Maps URL.";
         }
-        if (formData.totalTickets <= 0) newErrors.totalTickets = "Total tickets must be greater than zero.";
+        if (formData.ticketTypes.length === 0) {
+            newErrors.ticketTypes = "At least one ticket type is required.";
+        } else {
+            formData.ticketTypes.forEach((ticketType, index) => {
+                if (!ticketType.name) newErrors[`ticketType${index}Name`] = "Ticket type name is required.";
+                if (!ticketType.isFree && ticketType.price <= 0) newErrors[`ticketType${index}Price`] = "Price must be greater than zero for paid tickets.";
+                if (ticketType.totalTickets <= 0) newErrors[`ticketType${index}TotalTickets`] = "Total tickets must be greater than zero.";
+            });
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -110,11 +117,26 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
     };
 
     const handleSwitchChange = (checked: boolean) => {
-        setFormData(prev => ({ ...prev, isFreeEvent: checked, eventPrice: checked ? 0 : prev.eventPrice }));
+        setFormData(prev => ({
+            ...prev,
+            isFreeEvent: checked,
+            ticketTypes: prev.ticketTypes.map(ticket => ({
+                ...ticket,
+                isFree: checked,
+                price: checked ? 0 : ticket.price
+            }))
+        }));
     };
 
     const handleCurrencyChange = (value: string) => {
-        setFormData(prev => ({ ...prev, eventCurrency: value }));
+        setFormData(prev => ({
+            ...prev,
+            eventCurrency: value,
+            ticketTypes: prev.ticketTypes.map(ticket => ({
+                ...ticket,
+                currency: value
+            }))
+        }));
     };
 
     const handleCategoryChange = (value: string) => {
@@ -141,6 +163,38 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
 
     const removeNewImage = (index: number) => {
         setNewImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string | number | boolean) => {
+        const updatedTicketTypes = [...formData.ticketTypes];
+        updatedTicketTypes[index] = { 
+            ...updatedTicketTypes[index], 
+            [field]: field === 'price' || field === 'totalTickets' ? Number(value) : value,
+            currency: formData.eventCurrency
+        };
+        if (field === 'isFree') {
+            updatedTicketTypes[index].price = value ? 0 : updatedTicketTypes[index].price;
+        }
+        setFormData(prev => ({
+            ...prev,
+            ticketTypes: updatedTicketTypes
+        }));
+    };
+
+    const addTicketType = () => {
+        setFormData(prev => ({
+            ...prev,
+            ticketTypes: [...prev.ticketTypes, { name: '', price: 0, currency: prev.eventCurrency, totalTickets: 0, isFree: prev.isFreeEvent }]
+        }));
+    };
+
+    const removeTicketType = (index: number) => {
+        if (formData.ticketTypes.length > 1) {
+            setFormData(prev => ({
+                ...prev,
+                ticketTypes: prev.ticketTypes.filter((_, i) => i !== index)
+            }));
+        }
     };
 
     const handleSave = () => {
@@ -219,6 +273,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                             {errors.eventDescription && <p className="text-red-500 text-sm">{errors.eventDescription}</p>}
                         </div>
 
+                        {/* Free Event Switch */}
                         <div className="flex items-center space-x-2">
                             <Switch
                                 id="free-event"
@@ -228,65 +283,37 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                             <Label htmlFor="free-event">Free Event</Label>
                         </div>
 
-                        {!formData.isFreeEvent && (
-                            <div className="space-y-2">
-                                <Label htmlFor="eventPrice">Event Price</Label>
-                                <div className="flex space-x-2">
-                                    <Select value={formData.eventCurrency} onValueChange={handleCurrencyChange}>
-                                        <SelectTrigger className="w-[120px]">
-                                            <SelectValue placeholder="Currency">
-                                                {formData.eventCurrency && (
-                                                    <div className="flex items-center">
-                                                        <ReactCountryFlag
-                                                            countryCode={formData.eventCurrency}
-                                                            svg
-                                                            style={{
-                                                                width: '1em',
-                                                                height: '1em',
-                                                            }}
-                                                            title={formData.eventCurrency}
-                                                        />
-                                                        <span className="ml-2">{formData.eventCurrency}</span>
-                                                    </div>
-                                                )}
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {africanCountries.map((country) => (
-                                                <SelectItem key={country.code} value={country.code}>
-                                                    <div className="flex items-center">
-                                                        <ReactCountryFlag
-                                                            countryCode={country.code}
-                                                            svg
-                                                            style={{
-                                                                width: '1em',
-                                                                height: '1em',
-                                                            }}
-                                                            title={country.name}
-                                                        />
-                                                        <span className="ml-2">{country.currency.code}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Input
-                                        id="eventPrice"
-                                        name="eventPrice"
-                                        type="number"
-                                        value={formData.eventPrice}
-                                        onChange={handleChange}
-                                        className="flex-grow"
-                                        min="0"
-                                        step="0.01"
-                                    />
-                                </div>
-                                {errors.eventPrice && <p className="text-red-500 text-sm">{errors.eventPrice}</p>}
-                                {errors.eventCurrency && <p className="text-red-500 text-sm">{errors.eventCurrency}</p>}
-                            </div>
-                        )}
-
+                        {/* Currency Selection */}
                         <div className="space-y-2">
+                            <Label htmlFor="eventCurrency">Event Currency</Label>
+                            <Select value={formData.eventCurrency} onValueChange={handleCurrencyChange}>
+                                <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Select a currency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {africanCountries.map((country) => (
+                                        <SelectItem key={country.code} value={country.code}>
+                                            <div className="flex items-center">
+                                                <ReactCountryFlag
+                                                    countryCode={country.code}
+                                                    svg
+                                                    style={{
+                                                        width: '1em',
+                                                        height: '1em',
+                                                    }}
+                                                    title={country.name}
+                                                />
+                                                <span className="ml-2">{country.currency.code}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.eventCurrency && <p className="text-red-500 text-sm">{errors.eventCurrency}</p>}
+                        </div>
+
+                          {/* Event Date and Time */}
+                          <div className="space-y-2">
                             <Label>Event Date and Time</Label>
                             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                 <Popover>
@@ -319,6 +346,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                             {errors.eventDate && <p className="text-red-500 text-sm">{errors.eventDate}</p>}
                         </div>
 
+                        {/* Address Location */}
                         <div className="space-y-2">
                             <Label htmlFor="addressLocation">Address Location</Label>
                             <Input
@@ -330,6 +358,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                             {errors.addressLocation && <p className="text-red-500 text-sm">{errors.addressLocation}</p>}
                         </div>
 
+                        {/* Google Maps URL */}
                         <div className="space-y-2">
                             <Label htmlFor="googleMapsUrl">Google Maps URL</Label>
                             <Input
@@ -341,17 +370,65 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                             {errors.googleMapsUrl && <p className="text-red-500 text-sm">{errors.googleMapsUrl}</p>}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="totalTickets">Total Tickets Available</Label>
-                            <Input
-                                id="totalTickets"
-                                name="totalTickets"
-                                type="number"
-                                value={formData.totalTickets}
-                                onChange={handleChange}
-                                min="1"
-                            />
-                            {errors.totalTickets && <p className="text-red-500 text-sm">{errors.totalTickets}</p>}
+                        {/* Ticket Types */}
+                        <div className="space-y-4">
+                            <Label className="text-lg font-medium text-gray-700">Ticket Types</Label>
+                            {formData.ticketTypes.map((ticketType, index) => (
+                                <div key={index} className="space-y-2 p-4 border rounded-md">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="text-sm font-medium text-gray-700">Ticket Type {index + 1}</Label>
+                                        {index > 0 && (
+                                            <Button type="button" variant="destructive" size="sm" onClick={() => removeTicketType(index)}>
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <Input
+                                        placeholder="Ticket Name"
+                                        value={ticketType.name}
+                                        onChange={(e) => handleTicketTypeChange(index, 'name', e.target.value)}
+                                        className="w-full"
+                                    />
+                                    {errors[`ticketType${index}Name`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Name`]}</p>}
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <Switch
+                                            checked={ticketType.isFree}
+                                            onCheckedChange={(checked) => handleTicketTypeChange(index, 'isFree', checked)}
+                                        />
+                                        <Label>Free Ticket</Label>
+                                    </div>
+                                    {!ticketType.isFree && (
+                                        <div className="flex space-x-2 mt-2">
+                                            <Input
+                                                type="number"
+                                                placeholder="Price"
+                                                value={ticketType.price}
+                                                onChange={(e) => handleTicketTypeChange(index, 'price', e.target.value)}
+                                                className="flex-grow"
+                                                min="0"
+                                                step="0.01"
+                                                disabled={ticketType.isFree}
+                                            />
+                                        </div>
+                                    )}
+                                    {errors[`ticketType${index}Price`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Price`]}</p>}
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <Input
+                                            type="number"
+                                            placeholder="Total Tickets"
+                                            value={ticketType.totalTickets}
+                                            onChange={(e) => handleTicketTypeChange(index, 'totalTickets', e.target.value)}
+                                            className="flex-grow"
+                                            min="1"
+                                        />
+                                    </div>
+                                    {errors[`ticketType${index}TotalTickets`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}TotalTickets`]}</p>}
+                                </div>
+                            ))}
+                            <Button type="button" onClick={addTicketType} className="w-full mt-2">
+                                <Plus className="h-4 w-4 mr-2" /> Add Ticket Type
+                            </Button>
+                            {errors.ticketTypes && <p className="text-red-500 text-sm">{errors.ticketTypes}</p>}
                         </div>
 
                         <div className="space-y-2">
