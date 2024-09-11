@@ -1,13 +1,27 @@
 'use client'
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Home, LineChart, PanelLeft, Settings, Users2, PartyPopper, ArrowBigLeftDash, Ticket } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Separator } from "@/components/ui/separator"
 
 export default function SidebarPublisher() {
+  const pathname = usePathname()
+
+  const isActive = (href: string): boolean => pathname === href
+
+  const linkClass = (href: string): string => `flex items-center gap-4 ${
+    isActive(href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+  }`
+
+  const iconClass = (href: string): string => `flex h-9 w-9 items-center justify-center rounded-lg ${
+    isActive(href) ? 'bg-gray-300' : ''
+  } text-black transition-colors hover:text-gray-600 md:h-8 md:w-8`
+
   return (
     <TooltipProvider>
       <Sheet>
@@ -18,46 +32,36 @@ export default function SidebarPublisher() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[300px] sm:hidden">
-          <nav className="grid gap-6 text-lg font-medium">
+          <nav className="grid gap-8 text-lg font-medium">
             <Link
               href="/"
-              className="flex items-center gap-2 text-lg font-semibold"
+              className="flex rounded-full bg-black text-white p-2 mr-10 items-center gap-2 text-lg font-semibold"
             >
               <ArrowBigLeftDash className="h-5 w-5" />
               Africa Events
             </Link>
-            <Link
-              href="/publisher/dashboard"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/publisher/dashboard" className={linkClass('/publisher/dashboard')}>
               <Home className="h-5 w-5" />
               Dashboard
             </Link>
-            <Link
-              href="/my-events"
-              className="flex items-center gap-4 text-foreground"
-            >
+            <Link href="/publisher/my-events" className={linkClass('/publisher/my-events')}>
               <PartyPopper className="h-5 w-5" />
               My Events
             </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/publisher/tickets" className={linkClass('/publisher/tickets')}>
               <Ticket className="h-5 w-5" />
               Tickets details
             </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
-              <LineChart className="h-5 w-5" />
-              Analytics
+            <Link href="/publisher/attendees" className={linkClass('/publisher/attendees')}>
+              <Users2 className="h-5 w-5" />
+              Attendees
             </Link>
-            <Link
-              href="/publisher/settings"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/publisher/analytics" className={linkClass('/publisher/analytics')}>
+              <LineChart className="h-5 w-5" />
+              Analytics 
+            </Link>
+            <Separator />
+            <Link href="/publisher/settings" className={linkClass('/publisher/settings')}>
               <Settings className="h-5 w-5" />
               Settings
             </Link>
@@ -68,30 +72,23 @@ export default function SidebarPublisher() {
         <nav className="flex flex-col items-center gap-4 px-2 py-4">
           <Link
             href="/"
-            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-black text-lg font-semibold text-white md:h-8 md:w-8 md:text-base"
           >
             <ArrowBigLeftDash className="h-4 w-4 transition-all group-hover:scale-110" />
             <span className="sr-only">Africa Events</span>
           </Link>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/publisher/dashboard"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/publisher/dashboard" className={iconClass('/publisher/dashboard')}>
                 <Home className="h-5 w-5" />
                 <span className="sr-only">Dashboard</span>
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
-  
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/publisher/my-events"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/publisher/my-events" className={iconClass('/publisher/my-events')}>
                 <PartyPopper className="h-5 w-5" />
                 <span className="sr-only">My events</span>
               </Link>
@@ -100,10 +97,7 @@ export default function SidebarPublisher() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/publisher/tickets" className={iconClass('/publisher/tickets')}>
                 <Ticket className="h-5 w-5" />
                 <span className="sr-only">Tickets details</span>
               </Link>
@@ -112,10 +106,16 @@ export default function SidebarPublisher() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/publisher/attendees" className={iconClass('/publisher/attendees')}>
+                <Users2 className="h-5 w-5" />
+                <span className="sr-only">Attendees</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Attendees</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/publisher/analytics" className={iconClass('/publisher/analytics')}>
                 <LineChart className="h-5 w-5" />
                 <span className="sr-only">Analytics</span>
               </Link>
@@ -126,10 +126,7 @@ export default function SidebarPublisher() {
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 py-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/publisher/settings"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/publisher/settings" className={iconClass('/publisher/settings')}>
                 <Settings className="h-5 w-5" />
                 <span className="sr-only">Settings</span>
               </Link>

@@ -1,3 +1,5 @@
+"use client"
+
 import SignUp from "./signup"
 
 const SignUpPage = () => {

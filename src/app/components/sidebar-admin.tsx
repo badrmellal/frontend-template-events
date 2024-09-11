@@ -1,14 +1,27 @@
 'use client'
 
 import Link from "next/link"
-import { Home, LineChart, PanelLeft, Settings, Users2, PartyPopper, ArrowBigLeftDash } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Home, LineChart, PanelLeft, Settings, Users2, PartyPopper, ArrowBigLeftDash, MessageCircleIcon, Ticket } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-
+import { Separator } from "@/components/ui/separator"
 
 export default function SidebarAdmin() {
+  const pathname = usePathname()
+
+  const isActive = (href: string): boolean => pathname === href
+
+  const linkClass = (href: string): string => `flex items-center gap-4 ${
+    isActive(href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+  }`
+
+  const iconClass = (href: string): string => `flex h-9 w-9 items-center justify-center rounded-lg ${
+    isActive(href) ? 'bg-gray-300' : ''
+  } text-black transition-colors hover:text-gray-600 md:h-8 md:w-8`
+
   return (
     <TooltipProvider>
       <Sheet>
@@ -19,46 +32,40 @@ export default function SidebarAdmin() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[300px] sm:hidden">
-          <nav className="grid gap-6 text-lg font-medium">
+          <nav className="grid gap-8 text-lg font-medium">
             <Link
               href="/"
-              className="flex items-center gap-2 text-lg font-semibold"
+              className="flex rounded-full bg-black text-white p-2 mr-10 items-center gap-2 text-lg font-semibold"
             >
               <ArrowBigLeftDash className="h-5 w-5" />
               Africa Events
             </Link>
-            <Link
-              href="/admin/dashboard"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/dashboard" className={linkClass('/admin/dashboard')}>
               <Home className="h-5 w-5" />
               Dashboard
             </Link>
-            <Link
-              href="/admin/events"
-              className="flex items-center gap-4 text-foreground"
-            >
+            <Link href="/admin/events" className={linkClass('/admin/events')}>
               <PartyPopper className="h-5 w-5" />
               Events
             </Link>
-            <Link
-              href="/admin/users"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/users" className={linkClass('/admin/users')}>
               <Users2 className="h-5 w-5" />
               Users
             </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Link href="/admin/tickets" className={linkClass('/admin/tickets')}>
+              <Ticket className="h-5 w-5" />
+              Tickets
+            </Link>
+            <Link href="/admin/support" className={linkClass('/admin/support')}>
+              <MessageCircleIcon className="h-5 w-5" />
+              Support
+            </Link>
+            <Link href="#" className={linkClass('#')}>
               <LineChart className="h-5 w-5" />
               Analytics
             </Link>
-            <Link
-              href="/admin/settings"
-              className="flex items-center gap-4 text-muted-foreground hover:text-foreground"
-            >
+            <Separator />
+            <Link href="/admin/settings" className={linkClass('/admin/settings')}>
               <Settings className="h-5 w-5" />
               Settings
             </Link>
@@ -69,30 +76,23 @@ export default function SidebarAdmin() {
         <nav className="flex flex-col items-center gap-4 px-2 py-4">
           <Link
             href="/"
-            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
+            className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-black text-lg font-semibold text-white md:h-8 md:w-8 md:text-base"
           >
             <ArrowBigLeftDash className="h-4 w-4 transition-all group-hover:scale-110" />
             <span className="sr-only">Africa Events</span>
           </Link>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/admin/dashboard"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/admin/dashboard" className={iconClass('/admin/dashboard')}>
                 <Home className="h-5 w-5" />
                 <span className="sr-only">Dashboard</span>
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
-  
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/admin/events"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/admin/events" className={iconClass('/admin/events')}>
                 <PartyPopper className="h-5 w-5" />
                 <span className="sr-only">Events</span>
               </Link>
@@ -101,22 +101,34 @@ export default function SidebarAdmin() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/admin/users"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/admin/users" className={iconClass('/admin/users')}>
                 <Users2 className="h-5 w-5" />
                 <span className="sr-only">Users</span>
               </Link>
-            </TooltipTrigger>
+            </TooltipTrigger> 
             <TooltipContent side="right">Users</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/admin/tickets" className={iconClass('/admin/tickets')}>
+                <Ticket className="h-5 w-5" />
+                <span className="sr-only">Tickets</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Tickets</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="/admin/support" className={iconClass('/admin/support')}>
+                <MessageCircleIcon className="h-5 w-5" />
+                <span className="sr-only">Support</span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Support</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link href="#" className={iconClass('#')}>
                 <LineChart className="h-5 w-5" />
                 <span className="sr-only">Analytics</span>
               </Link>
@@ -127,10 +139,7 @@ export default function SidebarAdmin() {
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 py-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link
-                href="/admin/settings"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-              >
+              <Link href="/admin/settings" className={iconClass('/admin/settings')}>
                 <Settings className="h-5 w-5" />
                 <span className="sr-only">Settings</span>
               </Link>
@@ -139,7 +148,6 @@ export default function SidebarAdmin() {
           </Tooltip>
         </nav>
       </aside>
-
     </TooltipProvider>
   )
 }

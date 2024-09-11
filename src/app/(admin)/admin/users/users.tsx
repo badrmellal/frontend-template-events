@@ -81,6 +81,8 @@ export default function UsersDashboard() {
   const [deleteUserId, setDeleteUserId] = useState<User["id"] | null>(null)
   const [newUser, setNewUser] = useState({ username: "", email: "", password:"", role: "" });
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(10);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +107,15 @@ export default function UsersDashboard() {
   const filteredUsers = users.filter((user) =>
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+
+  // Get current users
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,9 +245,9 @@ export default function UsersDashboard() {
 }
 
   return (
-<>
+<div className="w-full bg-black sm:pl-14 ml-0 min-h-screen">
         <SidebarAdmin />
-              <div className="flex justify-end pt-4 pr-4 md:pr-24">
+              <div className="flex justify-end pt-4 pr-4 md:pr-6">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                   <Button
@@ -256,23 +267,23 @@ export default function UsersDashboard() {
                   <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem><Headset className="h-4 w-4 mx-1" /> Support</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1" /> Logout</DropdownMenuItem>
+                  <DropdownMenuItem><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
     <div className="w-full max-w-7xl mx-auto p-4 space-y-4 ">
      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Users</h1>
+        <h1 className="text-2xl font-bold text-gray-100">User Management</h1>
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-slate-800">
               <UserPlus className="mr-2 h-4 w-4" />
               Add User
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="rounded-md max-w-[325px] sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
               <DialogDescription>
@@ -344,8 +355,8 @@ export default function UsersDashboard() {
       </div>
    
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+        <div className="relative text-black bg-white rounded-md w-full sm:w-64">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 " />
           <Input
             placeholder="Search users..."
             className="pl-8"
@@ -355,10 +366,10 @@ export default function UsersDashboard() {
         </div>
      
         <Select defaultValue="all">
-          <SelectTrigger className="w-full sm:w-36">
+          <SelectTrigger className="w-full bg-white text-black sm:w-36">
             <SelectValue placeholder="Filter by role" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white text-black">
             <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="ROLE_ADMIN">Admin</SelectItem>
             <SelectItem value="ROLE_PUBLISHER">Publisher</SelectItem>
@@ -368,8 +379,8 @@ export default function UsersDashboard() {
         
       </div>
       <div className="hidden md:block">
-        <div className="rounded-lg border">
-          <Table>
+        <div className="rounded-lg mt-10 border">
+          <Table className="bg-white rounded-md">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">Name</TableHead>
@@ -559,13 +570,33 @@ export default function UsersDashboard() {
       </div>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Showing {filteredUsers.length} of {users.length} users
+        Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
         </p>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm">
+          {Array.from({ length: Math.ceil(filteredUsers.length / usersPerPage) }, (_, i) => (
+            <Button
+              key={i}
+              variant={currentPage === i + 1 ? "default" : "outline"}
+              size="sm"
+              onClick={() => paginate(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === Math.ceil(filteredUsers.length / usersPerPage)}
+          >
             Next
           </Button>
         </div>
@@ -573,7 +604,7 @@ export default function UsersDashboard() {
 
       {/* Edit User Modal */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] max-w-[90vw] rounded-md">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
@@ -659,7 +690,7 @@ export default function UsersDashboard() {
       </AlertDialog>
 
     </div>
-</>
+</div>
   );
 }
 

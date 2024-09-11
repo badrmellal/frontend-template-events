@@ -39,6 +39,7 @@ const africanCountries = [
   { code: 'MA', dial_code: '+212', name: 'Morocco' },
   { code: 'DZ', dial_code: '+213', name: 'Algeria' },
   { code: 'TN', dial_code: '+216', name: 'Tunisia' },
+  { code: 'MR', dial_code: '+222', name: 'Mauritania' }
 ];
 
 

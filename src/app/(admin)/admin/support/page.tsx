@@ -2,16 +2,17 @@
 
 import React from "react";
 import useAdminAuth from "../use-admin-auth";
-import AdminEvents from "./events";
+import AdminSupport from "./support"
 
-
-const EventsDashboardPage: React.FC = () => {
+const AdminSupportPage: React.FC = () => {
     const isAuthorized = useAdminAuth();
 
     if(!isAuthorized){
         return null;
     }
-    return <AdminEvents />
+
+    return <AdminSupport />
+    
 }
 
-export default EventsDashboardPage;
+export default AdminSupportPage;

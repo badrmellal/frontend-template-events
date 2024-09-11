@@ -1,63 +1,74 @@
-"use client";
+'use client'
 
-import React, { useCallback, useEffect, useState } from "react";
-import axios from "axios";
-import Notification from "../components/notification";
-import { FcGoogle } from "react-icons/fc";
-import { FaApple } from "react-icons/fa";
-import { MarqueeForReviews } from "../components/reviews";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { JwtPayload, jwtDecode } from "jwt-decode";
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { JwtPayload, jwtDecode } from 'jwt-decode'
+import axios from 'axios'
+import Image from 'next/image'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Icons } from '@/components/ui/icons'
+import { Eye, EyeOff } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
-const Login: React.FC = () => {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [disabled, setDisabled] = useState(true);
-  const [dirty, setDirty] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string}>({})
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+interface CustomJwtPayload extends JwtPayload {
+  authorities: string[]
+}
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [dirty, setDirty] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const {toast} = useToast();
 
   const validateEmail = (email: string) => {
-    const req = /\S+@\S+\.\S+/;
-    return req.test(email);
-  };
+    const regex = /\S+@\S+\.\S+/
+    return regex.test(email)
+  }
 
   const handleValidation = useCallback(() => {
-    const newErrors: { [key: string]: string } = {};
-    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password);
+    const newErrors: { [key: string]: string } = {}
+    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
 
     if (dirty) {
       if (!validateEmail(email)) {
-        newErrors.email = "Please enter a valid email address.";
+        newErrors.email = "Please enter a valid email address."
       }
       if (password.length < 7) {
-        newErrors.password = "Password must be at least 7 characters long.";
+        newErrors.password = "Password must be at least 7 characters long."
       }
       if (!validPassword) {
-        newErrors.password = "Password must contain both letters and numbers.";
+        newErrors.password = "Password must contain both letters and numbers."
       }
-      setErrors(newErrors);
-      setDisabled(Object.keys(newErrors).length > 0);
     }
-  }, [email, password, dirty]);
+    setErrors(newErrors)
+  }, [email, password, dirty])
 
   useEffect(() => {
-    handleValidation();
-  }, [handleValidation]);
-
-  //to include it in jwt payload because authorities don't exist initially in JwtPayload
-  interface CustomJwtPayload extends JwtPayload{
-    authorities: string[];
-  }
-
+    handleValidation()
+  }, [handleValidation])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
+    setDirty(true)
+    handleValidation()
+
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
     try {
       const response = await axios.post(
         "http://localhost:8080/user/login",
@@ -67,169 +78,154 @@ const Login: React.FC = () => {
             "Content-Type": "application/x-www-form-urlencoded",
           },
         }
-      );
+      )
 
       if (response.status === 200) {
-        setNotification({ message: "Login successful!", type: "success" });
-        setEmail("");
-        setPassword("");
-        localStorage.setItem("token", response.data);
-        const decodedToken = jwtDecode<CustomJwtPayload>(response.data);
-        const userAuthorities = decodedToken.authorities;
+        localStorage.setItem("token", response.data)
+        const decodedToken = jwtDecode<CustomJwtPayload>(response.data)
+        const userAuthorities = decodedToken.authorities
 
         if (userAuthorities.includes("user:delete")) {
-          router.push("/admin/dashboard");
-      } else if (
-          userAuthorities.includes("event:create") &&
-          userAuthorities.includes("event:update")
-      ) {
-          router.push("/publisher/dashboard");
-      } else if (
-          userAuthorities.includes("user:read") &&
-          userAuthorities.includes("event:read")
-      ) {
-          router.push("/user/dashboard");
-      } else {
-          router.push("/access-denied");
+          router.push("/admin/dashboard")
+        } else if (userAuthorities.includes("event:create") && userAuthorities.includes("event:update")) {
+          router.push("/publisher/dashboard")
+        } else if (userAuthorities.includes("user:read") && userAuthorities.includes("event:read")) {
+          router.push("/user/dashboard")
+        } else {
+          router.push("/access-denied")
+        }
       }
-    }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        let errorMessage = "Failed to log in! Please try again.";
-
-        if (status === 401) {
-          errorMessage = "Invalid email or password!";
+        if (err.response?.status === 401) {
+          setError("Invalid email or password!")
+        } else if (err.response?.status === 403) {
+          toast({
+            title: "Please verify your email",
+            description: "Check your inbox for a verification link.",
+            variant: "destructive"
+          })
+        } else {
+          toast({
+            title: "Failed to log in.",
+            description: "Please try again later!",
+            variant: "destructive"
+          })
         }
-
-        setNotification({ message: errorMessage, type: "error" });
       } else {
-        setNotification({
-          message: "An unexpected error occurred! Please try again.",
-          type: "error",
-        });
+        setError("An internal server error occurred. Please try again later.")
       }
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
+
+
+  const handleSignupClick = () => {
+    router.push("/sign-up");
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-gray-400 to-gray-900">
-      <div className="absolute inset-0">
-        <MarqueeForReviews />
+    <div className="min-h-screen bg-black flex flex-col md:flex-row items-center justify-center bg-cover bg-center">
+      <div className="w-full md:w-1/2 p-4 flex justify-center items-center">
+        <Image src="/logo-with-bg.png" alt="Logo africa event" width={400} height={400} className="max-w-[250px] max-h-[200px] sm:max-h-[380px] sm:max-w-[400px]" />
       </div>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="bg-white z-10 p-8 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md"
-      >
-        <h2 className="text-3xl font-semibold mb-4 text-left font-montserrat text-gray-800">
-          Login
-        </h2>
-        <p className="text-sm font-medium mb-8 text-left text-gray-500">Welcome back to your account</p>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-5 mt-3 relative">
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setDirty(true);
-              }}
-              className="peer mt-1 shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline placeholder-transparent"
-              placeholder="Email"
-              required
-            />
-            <label
-              htmlFor="email"
-              className="absolute left-3 -top-3.5 text-gray-600 text-sm font-montserrat font-medium transition-all duration-200 ease-in-out peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:left-3 peer-placeholder-shown:cursor-text peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-gray-600"
-            >
-              Email
-            </label>
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-          </div>
-          <div className="mb-5 mt-3 relative">
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setDirty(true);
-              }}
-              className="peer mt-1 shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline placeholder-transparent"
-              placeholder="Password"
-              required
-            />
-            <label
-              htmlFor="password"
-              className="absolute left-3 -top-3.5 text-gray-600 text-sm font-montserrat font-medium transition-all duration-200 ease-in-out peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:left-3 peer-placeholder-shown:cursor-text peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-gray-600"
-            >
-              Password
-            </label>
-            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
-          </div>
-          <div className="flex items-center justify-between">
-            <motion.button
-              type="submit"
-              disabled={disabled}
-              whileHover={{ scale: disabled ? 1 : 1.05 }}
-              whileTap={{ scale: disabled ? 1 : 0.95 }}
-              className={`w-full ${
-                disabled
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gray-700 hover:bg-gray-900"
-              } text-white shadow-md font-bold font-montserrat py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out`}
-            >
-              Login
-            </motion.button>
-          </div>
-          <div className="flex items-center justify-center">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-full mt-3 bg-transparent text-black border border-black hover:bg-black hover:text-white font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out"
-            >
-              <div className="flex justify-center items-center">
-                <FcGoogle className="h-6 w-6 mx-4" />
-                Login with Google
+      <div className="w-full md:w-1/2 p-8 flex justify-center items-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Login</CardTitle>
+            <CardDescription>Enter your email and password to access your account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      setDirty(true)
+                    }}
+                    required
+                  />
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                </div>
+                <div className="space-y-2">
+                  <div className="relative">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      setDirty(true)
+                    }}
+                    required
+                  />
+                  <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 pt-6 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                    </div>
+                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                </div>
               </div>
-            </motion.button>
-          </div>
-          <div className="flex justify-center items-center">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-full mt-3 bg-transparent text-black border border-black hover:bg-black hover:text-white font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out"
-            >
-              <div className="flex justify-center items-center">
-                <FaApple className="h-6 w-6 mx-4" />
-                Login with Apple
+              <Button className="w-full mt-6" type="submit" disabled={isLoading || Object.keys(errors).length > 0}>
+                {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-            </motion.button>
-          </div>
-          <div className="flex justify-center items-start">
-            <div className="mt-5 font-montserrat text-sm text-gray-800">
-              Don&apos;t have an account yet?{" "}
-              <a className="font-bold cursor-pointer" href="/sign-up">
-                Register here
-              </a>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
-          </div>
-        </form>
-      </motion.div>
-      {notification && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification(null)}
-        />
+            <div className="grid grid-cols-2 gap-4">
+              <Button variant="outline">
+                <Icons.google className="mr-2 h-4 w-4" /> Google
+              </Button>
+              <Button variant="outline">
+                <Icons.apple className="mr-2 h-4 w-4" /> Apple
+              </Button>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col items-center">
+            <p className="text-sm text-muted-foreground mt-4">
+              Don&apos;t have an account?{" "}
+              <Button onClick={handleSignupClick} variant="ghost">
+                Sign up
+              </Button>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-4 left-4 right-4"
+        >
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
     </div>
-  );
-};
-
-export default Login;
+  )
+}

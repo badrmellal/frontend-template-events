@@ -1,81 +1,84 @@
-"use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import Dropdown from "./dropdown";
-import axios from "axios";
-import { FcGoogle } from "react-icons/fc";
-import { FaApple } from "react-icons/fa";
-import { MarqueeForReviews } from "../components/reviews";
-import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import axios from 'axios'
+import Image from 'next/image'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Icons } from '@/components/ui/icons'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
+import { Eye, EyeOff } from 'lucide-react'
 
-const SignUp: React.FC = () => {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
-  const [disabled, setDisabled] = useState(true);
-  const [googleAppleDisabled, setGoogleAppleDisabled] = useState(true);
-  const [dirty, setDirty] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const { toast } = useToast();
+export default function SignUp() {
+  const router = useRouter()
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  const [dirty, setDirty] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const { toast } = useToast()
 
   const roles = [
     { label: "I want to buy tickets", value: "ROLE_BASIC_USER" },
     { label: "I want to publish an event", value: "ROLE_PUBLISHER" },
-  ];
+  ]
 
   const validateEmail = (email: string) => {
-    const req = /\S+@\S+\.\S+/;
-    return req.test(email);
-  };
+    const regex = /\S+@\S+\.\S+/
+    return regex.test(email)
+  }
 
   const handleValidation = useCallback(() => {
-    const newErrors: { [key: string]: string } = {};
-    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password);
+    const newErrors: { [key: string]: string } = {}
+    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
 
     if (dirty) {
       if (!validateEmail(email)) {
-        newErrors.email = "Please enter a valid email address.";
+        newErrors.email = "Please enter a valid email address."
       }
       if (password.length < 7) {
-        newErrors.password = "Password must be at least 7 characters long.";
+        newErrors.password = "Password must be at least 7 characters long."
       }
       if (!validPassword) {
-        newErrors.password = "Password must contain both letters and numbers.";
+        newErrors.password = "Password must contain both letters and numbers."
+      }
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match."
       }
       if (!role) {
-        newErrors.role = "Please select the account type.";
+        newErrors.role = "Please select the account type."
       }
-      setErrors(newErrors);
-      setDisabled(Object.keys(newErrors).length > 0);
     }
-  }, [email, password, dirty, role]);
+    setErrors(newErrors)
+  }, [email, password, role, dirty, confirmPassword])
 
   useEffect(() => {
-    handleValidation();
-  }, [handleValidation]);
-
-  useEffect(() => {
-    if (!role) {
-      setGoogleAppleDisabled(true);
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        role: "Please select the account type first.",
-      }));
-      return;
-    }
-    setGoogleAppleDisabled(false);
-    setErrors((prevErrors) => {
-      const { role, ...rest } = prevErrors;
-      return rest;
-    });
-  }, [role]);
+    handleValidation()
+  }, [handleValidation])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
+    setDirty(true)
+    handleValidation()
+
+    if (Object.keys(errors).length > 0) {
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
     try {
       const response = await axios.post(
         "http://localhost:8080/user/register",
@@ -85,193 +88,218 @@ const SignUp: React.FC = () => {
             "Content-Type": "application/x-www-form-urlencoded",
           }
         }
-      );
+      )
 
       if (response.status === 201) {
-        setUsername("");
-        setEmail("");
-        setPassword("");
-        setRole("");
         toast({ 
-          title: "Login to continue!",
+          title: "Account created successfully!",
+          description: "Please confirm your email then log in."
         })
-        router.push("/login");
+        setTimeout(()=>{
+          router.push("/login")
+        }, 3000)
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        let errorMessage = "Failed to create account! Please try again.";
-
+        const status = err.response?.status
         if (status === 409) {
-          errorMessage = err.response?.data || "Email or username already exist! Please try again.";
-          toast({
-            variant: "destructive",
-            title: "Email or username already exist!",
-            description: "Please try again."
+          toast({ 
+            title: "Please try again!",
+            description: "Email or username already exists.",
+            variant: "destructive"
+          })
+        } else {
+          toast({ 
+            title: "Please try again!",
+            description: "Failed to create your account.",
+            variant: "destructive"
           })
         }
-        toast({
-          variant: "destructive",
-          title: "Failed to create account!",
-          description: "Please try again."
-        })
-
       } else {
-        toast({
-          variant: "destructive",
-          title: "An unexpected error occurred!",
-          description: "Please try again."
-        })
+        setError("An unexpected error occurred. Please try again.")
       }
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
+
+  const handleGoogleSignUp = () => {
+    //  Google sign-up logic later
+    console.log("Google sign-up")
+  }
+
+  const handleAppleSignUp = () => {
+    //  Apple sign-up logic later
+    console.log("Apple sign-up")
+  }
+
+  const handleLoginClick = () => {
+    router.push("/login")
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-gray-400 to-gray-900">
-      <div className="absolute inset-0">
-        <MarqueeForReviews />
+    <div className="min-h-screen bg-black flex flex-col md:flex-row items-center justify-center bg-cover bg-center">
+      <div className="w-full md:w-1/2 p-4 flex justify-center items-center">
+        <Image src="/logo-with-bg.png" alt="Logo africa event" width={400} height={400} className="max-w-[250px] max-h-[200px] sm:max-h-[380px] sm:max-w-[400px]" />
       </div>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="bg-white z-10 p-8 rounded-lg shadow-lg w-full max-w-xs sm:max-w-md"
-      >
-        <h2 className="text-3xl font-semibold mb-4 text-left font-montserrat text-gray-800">
-          Register
-        </h2>
-          <p className="text-sm font-medium mb-8 text-left text-gray-500">Create an account to get started</p>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-5 mt-3 relative">
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="peer shadow mt-1 appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline placeholder-transparent"
-              placeholder="Username"
-              required
-            />
-            <label
-              htmlFor="username"
-              className="absolute left-3 -top-3.5 text-gray-600 text-sm font-montserrat font-medium transition-all duration-200 ease-in-out peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:left-3 peer-placeholder-shown:cursor-text peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-gray-600"
-            >
-              Username
-            </label>
-            {errors.username && <p className="text-red-500 text-sm">{errors.username}</p>}
-          </div>
-          <div className="mb-5 mt-3 relative">
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setDirty(true);
-              }}
-              className="peer mt-1 shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline placeholder-transparent"
-              placeholder="Email"
-              required
-            />
-            <label
-              htmlFor="email"
-              className="absolute left-3 -top-3.5 text-gray-600 text-sm font-montserrat font-medium transition-all duration-200 ease-in-out peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:left-3 peer-placeholder-shown:cursor-text peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-gray-600"
-            >
-              Email
-            </label>
-            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
-          </div>
-          <div className="mb-5 mt-3 relative">
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setDirty(true);
-              }}
-              className="peer mt-1 shadow appearance-none border rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline placeholder-transparent"
-              placeholder="Password"
-              required
-            />
-            <label
-              htmlFor="password"
-              className="absolute left-3 -top-3.5 text-gray-600 text-sm font-montserrat font-medium transition-all duration-200 ease-in-out peer-placeholder-shown:top-2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:left-3 peer-placeholder-shown:cursor-text peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-gray-600"
-            >
-              Password
-            </label>
-            {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-montserrat text-sm font-bold mb-2" htmlFor="role">
-              Choose account type
-            </label>
-            <Dropdown
-              options={roles}
-              selectedValue={role}
-              onChange={(value) => setRole(value)}
-            />
-            {errors.role && <p className="text-red-500 text-sm">{errors.role}</p>}
-          </div>
-          {errors.global && <p className="text-red-500 text-sm mb-4">{errors.global}</p>}
-          <div className="flex items-center justify-between">
-            <motion.button
-              type="submit"
-              disabled={disabled}
-              whileHover={{ scale: disabled ? 1 : 1.05 }}
-              whileTap={{ scale: disabled ? 1 : 0.95 }}
-              className={`w-full ${disabled ? "bg-gray-300 cursor-not-allowed" : "bg-gray-700 hover:bg-gray-900"
-                } text-white shadow-md font-bold font-montserrat py-2 px-4 rounded-md focus:outline-none focus:shadow-outline transition duration-150 ease-in-out`}
-            >
-              Sign Up
-            </motion.button>
-          </div>
-          <div className="flex items-center justify-center">
-            <motion.button
-              type="button"
-              disabled={googleAppleDisabled}
-              whileHover={{ scale: googleAppleDisabled ? 1 : 1.05 }}
-              whileTap={{ scale: googleAppleDisabled ? 1 : 0.95 }}
-              className={`w-full mt-3 ${googleAppleDisabled
-                ? "bg-gray-900 text-white cursor-not-allowed"
-                : "bg-transparent text-black border border-black hover:bg-black hover:text-white"
-                } font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out`}
-            >
-              <div className="flex justify-center items-center">
-                <FcGoogle className="h-6 w-6 mx-4" />
-                Sign up with Google
+      <div className="w-full md:w-1/2 p-8 flex justify-center items-center">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Sign Up</CardTitle>
+            <CardDescription>Create an account to get started</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value)
+                      setDirty(true)
+                    }}
+                    required
+                  />
+                  {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value)
+                      setDirty(true)
+                    }}
+                    required
+                  />
+                   <span className="italic text-xs font-extralight text-gray-500">This email will be verified. You will use it to access your tickets.</span>
+                  {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        setDirty(true)
+                      }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value)
+                        setDirty(true)
+                      }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Account Type</Label>
+                  <Select onValueChange={(value) => setRole(value)} value={role}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select account type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
+                </div>
               </div>
-            </motion.button>
-          </div>
-          <div className="flex justify-center items-center">
-            <motion.button
-              type="button"
-              disabled={googleAppleDisabled}
-              whileHover={{ scale: googleAppleDisabled ? 1 : 1.05 }}
-              whileTap={{ scale: googleAppleDisabled ? 1 : 0.95 }}
-              className={`w-full mt-3 ${googleAppleDisabled
-                ? "bg-gray-900 text-white cursor-not-allowed"
-                : "bg-transparent text-black border border-black hover:bg-black hover:text-white"
-                } font-bold font-montserrat py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out`}
-            >
-              <div className="flex justify-center items-center">
-                <FaApple className="h-6 w-6 mx-4" />
-                Sign up with Apple
+              <Button className="w-full mt-6" type="submit" disabled={isLoading || Object.keys(errors).length > 0}>
+                {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
+                Sign Up
+              </Button>
+            </form>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-            </motion.button>
-          </div>
-          <div className="flex justify-center items-start">
-            <div className="mt-5 font-montserrat text-sm text-gray-800">
-              Already have an account?{" "}
-              <a className="font-bold cursor-pointer" href="/login">
-                Login here
-              </a>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
+              </div>
             </div>
-          </div>
-        </form>
-      </motion.div>
+            <div className="grid grid-cols-2 gap-4">
+              <Button disabled={!role} onClick={handleGoogleSignUp} variant="outline">
+                <Icons.google className="mr-2 h-4 w-4" /> Google
+              </Button>
+              <Button disabled={!role} onClick={handleAppleSignUp} variant="outline">
+                <Icons.apple className="mr-2 h-4 w-4" /> Apple
+              </Button>
+            </div>
+            {!role && (
+              <p className="text-sm text-red-500 mt-2 text-center">
+                Please select an account type to enable social sign-up options.
+              </p>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col items-center">
+            <p className="text-sm text-muted-foreground mt-4">
+              Already have an account?{" "}
+              <Button onClick={handleLoginClick} variant="ghost">
+                Log in
+              </Button>
+            </p>
+          </CardFooter>
+        </Card>
+      </div>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-4 left-4 right-4"
+        >
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
     </div>
-  );
-};
-
-export default SignUp;
+  )
+}
