@@ -88,9 +88,9 @@ export default function UserTicketsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-100 to-purple-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">My Support Tickets</h1>
+        <h1 className="text-4xl font-bold text-gray-100 mb-8 text-center">My Support Tickets</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="col-span-1 shadow-lg">
             <CardHeader>

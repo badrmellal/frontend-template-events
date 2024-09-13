@@ -49,7 +49,9 @@ interface TicketType {
     price: number;
     currency: string;
     totalTickets: number;
+    soldTickets: number;
     isFree: boolean;
+    ticketTypeId?: string;
 }
 
 const eventCategories = [
@@ -78,7 +80,14 @@ const CreateEvent: React.FC = () => {
         eventTime: '',
         addressLocation: '',
         googleMapsUrl: '',
-        ticketTypes: [{ name: 'General Admission', price: 0, currency: 'MA', totalTickets: 0, isFree: true }]
+        ticketTypes: [{ name: 'General Admission', 
+            price: 0, 
+            currency: '', 
+            totalTickets: 0, 
+            soldTickets: 0, 
+            isFree: true,
+            ticketTypeId: '' 
+        }]
     });
     const [isTokenExpired, setIsTokenExpired] = useState(false);
     const { toast } = useToast();
@@ -127,12 +136,10 @@ const CreateEvent: React.FC = () => {
         const updatedTicketTypes = [...formData.ticketTypes];
         updatedTicketTypes[index] = { 
             ...updatedTicketTypes[index], 
-            [field]: field === 'price' || field === 'totalTickets' ? Number(value) : value,
-            currency: formData.eventCurrency // to ensure currency is always synced with event currency
+            [field]: field === 'price' || field === 'totalTickets' || field === 'soldTickets' ? Number(value) : value,
+            currency: formData.eventCurrency,
+            isFree: formData.isFreeEvent
         };
-        if (field === 'isFree') {
-            updatedTicketTypes[index].price = value ? 0 : updatedTicketTypes[index].price;
-        }
         setFormData(prevState => ({
             ...prevState,
             ticketTypes: updatedTicketTypes
@@ -142,7 +149,13 @@ const CreateEvent: React.FC = () => {
     const addTicketType = () => {
         setFormData(prevState => ({
             ...prevState,
-            ticketTypes: [...prevState.ticketTypes, { name: '', price: 0, currency: 'MA', totalTickets: 0, isFree: false }]
+            ticketTypes: [...prevState.ticketTypes, {  name: '', 
+            price: 0, 
+            currency: prevState.eventCurrency || '', 
+            totalTickets: 0, 
+            soldTickets: 0,
+            isFree: prevState.isFreeEvent,
+            ticketTypeId: '' }]
         }));
     };
 
@@ -270,7 +283,16 @@ const CreateEvent: React.FC = () => {
                 ));
                 data.append('eventDate', format(utcDate, "yyyy-MM-dd'T'HH:mm:ss'Z'"));
             } else if (key === 'ticketTypes') {
-                data.append('ticketTypes', JSON.stringify(value));
+                // Preparing ticket types data
+                const ticketTypesData = formData.ticketTypes.map(tt => ({
+                    name: tt.name,
+                    price: tt.price,
+                    currency: tt.currency,
+                    totalTickets: tt.totalTickets,
+                    soldTickets: tt.soldTickets,
+                    ticketTypeId: tt.ticketTypeId || ''
+                }));
+                data.append('ticketTypes', JSON.stringify(ticketTypesData));
             } else if (key !== 'eventTime') {
                 data.append(key, value?.toString() || '');
             }
@@ -301,8 +323,16 @@ const CreateEvent: React.FC = () => {
                     eventTime: '',
                     addressLocation: '',
                     googleMapsUrl: '',
-                    ticketTypes: [{ name: 'General Admission', price: 0, currency: 'MA', totalTickets: 0, isFree: true }]
-                })
+                    ticketTypes: [{ 
+                        name: 'General Admission', 
+                        price: 0, 
+                        currency: '', 
+                        totalTickets: 0, 
+                        soldTickets: 0, 
+                        isFree: true,
+                        ticketTypeId: '' 
+                    }]
+                });
                 setPreviewImages([]);
 
             }

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { format, parseISO, set } from "date-fns";
-import { CalendarIcon, Plus, Upload, X } from "lucide-react";
+import { CalendarIcon, Plus, Tag, Ticket, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,11 +11,23 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from '@/components/ui/textarea';
-import { africanCountries } from '@/app/api/currency/route';
+import { africanCountries, formatCurrency } from '@/app/api/currency/route';
 import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
 import Image from 'next/image';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { FaMoneyBillWave } from "react-icons/fa";
+
+
+interface TicketType {
+    name: string;
+    price: number;
+    currency: string;
+    totalTickets: number;
+    soldTickets: number;
+    isFree: boolean;
+    ticketTypeId?: string;
+}
 
 interface Event {
     id: string;
@@ -30,13 +42,9 @@ interface Event {
     addressLocation: string;
     googleMapsUrl: string;
     ticketTypes: TicketType[];
-}
-interface TicketType{
-    name: string;
-    price: number;
-    currency: string;
+    approved: boolean;
     totalTickets: number;
-    isFree: boolean;
+    soldTickets: number;
 }
 
 interface EventFormInputs {
@@ -54,6 +62,11 @@ interface EventFormInputs {
     ticketTypes: TicketType[];
 }
 
+const getCurrencyCountryCode = (currencyCode: string) => {
+    const country = africanCountries.find(c => c.currency.code === currencyCode);
+    return country ? country.code : '';
+};
+
 const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (updatedEvent: Event, newImages: File[], newVideo? : File) => void }> = ({ event, onClose, onSave }) => {
     const [formData, setFormData] = useState<EventFormInputs>({
         eventName: event.eventName,
@@ -62,16 +75,20 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         eventImages: event.eventImages,
         eventVideo: event.eventVideo,
         isFreeEvent: event.isFreeEvent,
-        eventCurrency: event.eventCurrency,
+        eventCurrency: getCurrencyCountryCode(event.eventCurrency),
         eventDate: event.eventDate ? parseISO(event.eventDate) : undefined,
         eventTime: event.eventDate ? format(parseISO(event.eventDate), "HH:mm") : '',
         addressLocation: event.addressLocation,
         googleMapsUrl: event.googleMapsUrl,
-        ticketTypes: event.ticketTypes
+        ticketTypes: event.ticketTypes.map(tt => ({
+            ...tt,
+            isFree: event.isFreeEvent || tt.isFree
+        }))
     });
     const [newImages, setNewImages] = useState<File[]>([]);
     const [newVideo, setNewVideo] = useState<File | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
 
     const validateInputs = () => {
         let newErrors: { [key: string]: string } = {};
@@ -169,24 +186,33 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         const updatedTicketTypes = [...formData.ticketTypes];
         updatedTicketTypes[index] = { 
             ...updatedTicketTypes[index], 
-            [field]: field === 'price' || field === 'totalTickets' ? Number(value) : value,
-            currency: formData.eventCurrency
+            [field]: field === 'price' || field === 'totalTickets' || field === 'soldTickets' ? Number(value) : value,
+            currency: formData.eventCurrency,
+            isFree: formData.isFreeEvent
         };
-        if (field === 'isFree') {
-            updatedTicketTypes[index].price = value ? 0 : updatedTicketTypes[index].price;
-        }
+       
         setFormData(prev => ({
             ...prev,
             ticketTypes: updatedTicketTypes
         }));
     };
 
+
     const addTicketType = () => {
         setFormData(prev => ({
             ...prev,
-            ticketTypes: [...prev.ticketTypes, { name: '', price: 0, currency: prev.eventCurrency, totalTickets: 0, isFree: prev.isFreeEvent }]
+            ticketTypes: [...prev.ticketTypes, { 
+                name: '', 
+                price: 0, 
+                currency: prev.eventCurrency, 
+                totalTickets: 0, 
+                soldTickets: 0,
+                isFree: prev.isFreeEvent,
+                ticketTypeId: '' // will be generated on the backend bro
+            }]
         }));
     };
+
 
     const removeTicketType = (index: number) => {
         if (formData.ticketTypes.length > 1) {
@@ -390,15 +416,10 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                                         className="w-full"
                                     />
                                     {errors[`ticketType${index}Name`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Name`]}</p>}
-                                    <div className="flex items-center space-x-2 mt-2">
-                                        <Switch
-                                            checked={ticketType.isFree}
-                                            onCheckedChange={(checked) => handleTicketTypeChange(index, 'isFree', checked)}
-                                        />
-                                        <Label>Free Ticket</Label>
-                                    </div>
-                                    {!ticketType.isFree && (
-                                        <div className="flex space-x-2 mt-2">
+                                    {!formData.isFreeEvent && (
+                                        <div className="flex items-center space-x-2 mt-2">
+                                            <p className="text-xs text-gray-600">Ticket Price</p>
+                                            <FaMoneyBillWave className="h-4 w-4" />
                                             <Input
                                                 type="number"
                                                 placeholder="Price"
@@ -407,12 +428,14 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                                                 className="flex-grow"
                                                 min="0"
                                                 step="0.01"
-                                                disabled={ticketType.isFree}
+                                                disabled={formData.isFreeEvent}
                                             />
                                         </div>
                                     )}
                                     {errors[`ticketType${index}Price`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}Price`]}</p>}
                                     <div className="flex items-center space-x-2 mt-2">
+                                        <p className="text-xs text-gray-600">Tickets available</p>
+                                        <Ticket className="h-4 w-4" />
                                         <Input
                                             type="number"
                                             placeholder="Total Tickets"
@@ -423,6 +446,21 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                                         />
                                     </div>
                                     {errors[`ticketType${index}TotalTickets`] && <p className="text-red-500 text-sm">{errors[`ticketType${index}TotalTickets`]}</p>}
+                                    <div className="flex items-center space-x-2 mt-2">
+                                        <p className="text-xs text-gray-600">Sold Tickets</p>
+                                        <Input
+                                            type="number"
+                                            value={ticketType.soldTickets}
+                                            className="flex-grow"
+                                            disabled
+                                        />
+                                    </div>
+                                    {!formData.isFreeEvent && ticketType.price > 0 && (
+                                        <p className="text-sm text-gray-600 mt-2">
+                                            <Tag className="inline-block mr-2 h-4 w-4" />
+                                            Formatted price: {formatCurrency(ticketType.price, formData.eventCurrency)}
+                                        </p>
+                                    )}
                                 </div>
                             ))}
                             <Button type="button" onClick={addTicketType} className="w-full mt-2">

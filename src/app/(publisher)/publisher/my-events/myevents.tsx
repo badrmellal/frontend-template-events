@@ -21,6 +21,17 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+interface TicketType {
+  name: string;
+  price: number;
+  currency: string;
+  totalTickets: number;
+  soldTickets: number;
+  isFree: boolean;
+  ticketTypeId?: string;
+}
+
+
 interface Event {
   id: string;
   eventName: string;
@@ -28,13 +39,13 @@ interface Event {
   eventDescription: string;
   eventImages: string[];
   eventVideo: string | null;
-  eventPrice: number;
-  eventCurrency: string;
   isFreeEvent: boolean;
-  isApproved: boolean;
+  eventCurrency: string;
   eventDate: string;
   addressLocation: string;
   googleMapsUrl: string;
+  ticketTypes: TicketType[];
+  approved: boolean;
   totalTickets: number;
   soldTickets: number;
 }
@@ -126,6 +137,9 @@ const EventDeleteDialog = ({ eventId, onDeleteSuccess }: { eventId: string; onDe
     }
   };
 
+  //  TODO
+  // Estimated revenue calc
+
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -194,6 +208,7 @@ const MyEvents: React.FC = () => {
         },
       });
       setEvents(response.data);
+      console.log("data: ", response.data);
       setIsLoading(false);
     } catch (error: any) {
       console.error('Error fetching events:', error);
@@ -219,9 +234,17 @@ const MyEvents: React.FC = () => {
     setExpandedImage(imageSrc);
   };
 
+  const handleViewClick = (eventId: string) => {
+    router.push(`/publisher/event-details/${eventId}`);
+  }
+
   const handleEditEvent = (event: Event) => {
-    setEditingEvent(event);
-  };
+    setEditingEvent({
+        ...event,
+        totalTickets: event.ticketTypes.reduce((sum, tt) => sum + tt.totalTickets, 0),
+        soldTickets: event.ticketTypes.reduce((sum, tt) => sum + tt.soldTickets, 0)
+    });
+};
 
   const handleSaveEvent = async (updatedEvent: Event, newImages: File[], newVideo?: File) => {
     try {
@@ -232,7 +255,6 @@ const MyEvents: React.FC = () => {
     formData.append('eventCategory', updatedEvent.eventCategory);
     formData.append('eventDescription', updatedEvent.eventDescription);
     formData.append('isFreeEvent', (updatedEvent.isFreeEvent ?? false).toString());
-    formData.append('eventPrice', (updatedEvent.eventPrice ?? 0).toString());
     formData.append('eventCurrency', updatedEvent.eventCurrency);
      // Updating the date formatting to use ISO 8601
      const eventDate = new Date(updatedEvent.eventDate);
@@ -249,6 +271,8 @@ const MyEvents: React.FC = () => {
     formData.append('addressLocation', updatedEvent.addressLocation);
     formData.append('googleMapsUrl', updatedEvent.googleMapsUrl);
     formData.append('totalTickets', (updatedEvent.totalTickets ?? 0).toString());
+
+    formData.append('ticketTypes', JSON.stringify(updatedEvent.ticketTypes));
 
     // existing images
     updatedEvent.eventImages.forEach((image) => {
@@ -323,10 +347,10 @@ const MyEvents: React.FC = () => {
     // to apply filter
     switch (selectedFilter) {
       case 'upcoming':
-        result = result.filter(event => new Date(event.eventDate) > new Date() && event.isApproved);
+        result = result.filter(event => new Date(event.eventDate) > new Date() && event.approved);
         break;
       case 'draft':
-        result = result.filter(event => !event.isApproved);
+        result = result.filter(event => !event.approved);
         break;
       case 'past':
         result = result.filter(event => new Date(event.eventDate) <= new Date());
@@ -354,10 +378,10 @@ const MyEvents: React.FC = () => {
       <div className="flex items-center">
         <ListFilter className="mr-2 h-5 w-5 text-gray-200" />
         <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-          <SelectTrigger className="w-[180px] bg-gray-200 text-black border border-white focus:ring-2 focus:ring-gray-100 focus:border-transparent transition-all duration-200 ease-in-out hover:bg-gray-300">
+          <SelectTrigger className="w-[180px] bg-gray-200 text-black border border-amber-400 focus:ring-2 focus:ring-amber-100 focus:border-transparent transition-all duration-200 ease-in-out hover:bg-gray-300">
             <SelectValue placeholder="Filter events" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-100 text-black border border-gray-300 rounded-md overflow-hidden">
+          <SelectContent className="bg-gray-100 text-black border border-amber-300 rounded-md overflow-hidden">
             {filters.map((filter) => (
               <SelectItem 
                 key={filter.value} 
@@ -406,7 +430,7 @@ const MyEvents: React.FC = () => {
         <div className="bg-black p-3 sm:p-8 rounded-lg shadow-lg">
           <h1 className="text-3xl text-white font-bold tracking-tight">My Events</h1>
         <div className="flex items-center my-4 justify-between">
-          <Button onClick={handleCreateEvent}>
+          <Button className="bg-amber-500 text-black hover:bg-black hover:text-amber-500" onClick={handleCreateEvent}>
             <Plus className="mr-2 h-4 w-4" /> Create New Event
           </Button>
         </div>
@@ -420,7 +444,7 @@ const MyEvents: React.FC = () => {
           </div>
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-yellow-300"></div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -472,9 +496,9 @@ const MyEvents: React.FC = () => {
                     )
                   )}
                     <div className={`my-4 pt-3 flex items-center ${
-                      event.isApproved ? 'text-green-400' : 'text-yellow-400'
+                      event.approved  ? 'text-green-400' : 'text-yellow-400'
                     }`}>
-                      {event.isApproved ? (
+                      {event.approved ? (
                         <>
                           <CheckCircle className="mr-2" />
                           <span>Approved</span>
@@ -492,10 +516,20 @@ const MyEvents: React.FC = () => {
                       {format(parseISO(event.eventDate), "PPP p")}
                     </p>
                      
-                      <p className="flex items-center">
-                        <DollarSign className="inline-block mr-2 h-4 w-4 text-gray-500" />
-                        {event.eventPrice} {event.eventCurrency}
-                      </p>
+                    <p className="flex items-center">
+                      <DollarSign className="inline-block mr-2 h-4 w-4 text-gray-500" />
+                      {event.isFreeEvent ? (
+                        "Free"
+                      ) : (
+                        event.ticketTypes.length > 0 ? (
+                          <>
+                            {Math.min(...event.ticketTypes.map(tt => tt.price))} - {Math.max(...event.ticketTypes.map(tt => tt.price))} {event.eventCurrency}
+                          </>
+                        ) : (
+                          "Price not set"
+                        )
+                      )}
+                    </p>
                       <p className="flex items-center">
                         <Ticket className="inline-block mr-2 h-4 w-4 text-gray-500" />
                         {event.soldTickets} / {event.totalTickets} tickets sold
@@ -503,7 +537,10 @@ const MyEvents: React.FC = () => {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between bg-black p-3 ">
-                  <Button variant="outline" size="sm" className="text-black hover:text-white bg-white hover:bg-black">
+                  <Button variant="outline" 
+                  onClick={()=>{handleViewClick(event.id)}}
+                  size="sm" 
+                  className="text-black hover:text-white bg-white hover:bg-black">
                     <Eye className="mr-2 h-4 w-4" />
                     View 
                   </Button>

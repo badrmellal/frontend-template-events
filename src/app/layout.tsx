@@ -6,8 +6,11 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Africa Events",
-  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Africa Events is your gateway to the continent's most exciting gatherings.",
+  title: "Showtime Africa",
+  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Showtime Africa is your gateway to the continent's most exciting gatherings.",
+  icons: {
+    icon: "/favicon-logo.png",
+  },
 };
 
 export default function RootLayout({

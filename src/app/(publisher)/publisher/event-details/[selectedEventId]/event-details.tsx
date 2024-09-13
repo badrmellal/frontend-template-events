@@ -3,9 +3,9 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from "next/link"
 import Image from "next/image"
 import axios from 'axios';
-import { Calendar, Clock, Headset, LogOut, MapPin, Share2, Ticket, Users } from "lucide-react"
+import { Calendar, Clock, Headset, LogOut, MapPin, Share2, Ticket, Users, X } from "lucide-react"
 import Slider from "react-slick";
-
+import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,11 +20,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { formatCurrency } from '@/app/api/currency/route';
-import SidebarUser from '@/app/components/sidebar-user';
-
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { FaFacebook, FaInstagram, FaTiktok, FaTwitter } from 'react-icons/fa6';
+import { jwtDecode } from 'jwt-decode';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SidebarPublisher from '@/app/components/sidebar-publisher';
 
 interface Event {
   id: number;
@@ -63,11 +64,52 @@ interface EventDetailsProps {
   eventId: string;
 }
 
+const ExpandedImageView: React.FC<{ src: string; alt: string; onClose: () => void }> = ({ src, alt, onClose }) => {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          exit={{ scale: 0.8 }}
+          className="relative max-w-4xl max-h-[90vh]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Image
+            src={src}
+            alt={alt}
+            width={1200}
+            height={800}
+            className="rounded-lg object-contain"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute top-4 right-4 rounded-full bg-black bg-opacity-50 text-white hover:bg-opacity-75"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+
 export default function EventDetails({ eventId }: EventDetailsProps) {
-  const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+    const [event, setEvent] = useState<Event | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isPublisher, setIsPublisher] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
+    const router = useRouter();
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -84,6 +126,12 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
         console.log('Received response:', response.data);
         setEvent(response.data);
         setLoading(false);
+
+        // Checking if the current user is the publisher
+        if (token) {
+            const decodedToken = jwtDecode(token);
+            setIsPublisher(decodedToken.sub === response.data.eventManagerUsername);
+          }
       } catch (error) {
         console.error('Failed to fetch event details:', error);
         if (axios.isAxiosError(error)) {
@@ -99,21 +147,29 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   }, [eventId]);
 
   const handleBuyTickets = () => {
-    const token = localStorage.getItem("token");
-    const storedBooking = localStorage.getItem('currentBooking');
-    
-    if (!token) {
-      router.push("/sign-up");
-    } else if (event && storedBooking) {
-      const bookingDetails = JSON.parse(storedBooking);
-      if (bookingDetails.eventId === event.id) {
-        router.push(`/user/payment-confirmation/${event.id}`);
+    if (isPublisher) {
+        setDialogOpen(true);
       } else {
+        const token = localStorage.getItem("token");
+        const storedBooking = localStorage.getItem('currentBooking');
+        
+        if (!token) {
+        router.push("/sign-up");
+        } else if (event && storedBooking) {
+        const bookingDetails = JSON.parse(storedBooking);
+        if (bookingDetails.eventId === event.id) {
+            router.push(`/user/payment-confirmation/${event.id}`);
+        } else {
+            router.push('/');
+        }
+        } else {
         router.push('/');
-      }
-    } else {
-      router.push('/');
+        }
     }
+  };
+
+  const handleImageClick = (imageSrc: string) => {
+    setExpandedImage(imageSrc);
   };
 
   const openGoogleMaps = () => {
@@ -140,7 +196,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-black">
-        <div className="animate-pulse rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
+        <div className="animate-ping rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
       </div>
     );
   }
@@ -156,7 +212,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   return (
     <div className="flex min-h-screen flex-col bg-black text-white">
       <div className='text-black'>
-        <SidebarUser />
+        <SidebarPublisher />
       </div>
       <div className="absolute z-20 top-4 right-4">
         <DropdownMenu>
@@ -188,25 +244,31 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
           {event.eventImages.length > 1 ? (
             <Slider {...sliderSettings}>
               {event.eventImages.map((image, index) => (
-                <div key={index} className="h-[300px] md:h-[400px]">
+                <div key={index} className="h-[300px] md:h-[400px] relative">
                   <Image
                     src={image}
                     alt={`Event image ${index + 1}`}
-                    className="relative inset-0 h-full w-full object-cover"
+                    className="absolute inset-0 h-full w-full cursor-zoom-in object-cover"
                     width={1200}
                     height={400}
+                    onClick={() => {   
+                    console.log('Image clicked:', image);
+                    handleImageClick(image)}}
                   />
                 </div>
               ))}
             </Slider>
           ) : (
+            <div className="h-[300px] md:h-[400px] relative">
             <Image
-              src={event.eventImages[0] || "/placeholder.svg?height=400&width=1200"}
+              src={event.eventImages[0]}
               alt="Event cover"
-              className="relative inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full cursor-zoom-in object-cover"
               width={1200}
               height={400}
+              onClick={() => handleImageClick(event.eventImages[0])}
             />
+            </div>
           )}
           <div className="absolute inset-0 bg-black/50" />
           <div className="container relative z-10 flex h-full flex-col justify-end p-4 text-white md:p-6">
@@ -217,7 +279,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
         </div>
         <div className="container grid gap-6 p-4 md:grid-cols-3 md:p-6 lg:gap-10">
           <div className="md:col-span-2">
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Event Details</CardTitle>
               </CardHeader>
@@ -258,7 +320,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
             </Card>
           </div>
           <div className="space-y-6">
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Ticket Information</CardTitle>
               </CardHeader>
@@ -293,13 +355,16 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                     </div>
                   </div>
                 )}
-                <Button className="w-full bg-amber-500 text-black hover:bg-amber-600" onClick={handleBuyTickets}>
-                  <Ticket className="mr-2 h-4 w-4" />
-                  {event.isFreeEvent ? 'Reserve Ticket' : 'Buy Tickets'}
+                <Button 
+                    className="w-full bg-amber-500 text-black hover:bg-amber-600" 
+                    onClick={handleBuyTickets}
+                >
+                    <Ticket className="mr-2 h-4 w-4" />
+                    {isPublisher ? 'Buy Ticket' : (event.isFreeEvent ? 'Reserve Ticket' : 'Buy Tickets')}
                 </Button>
               </CardContent>
             </Card>
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Event Organizer</CardTitle>
               </CardHeader>
@@ -338,7 +403,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-black border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Share This Event</CardTitle>
               </CardHeader>
@@ -347,7 +412,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                     <Share2 className="h-4 w-4 mt-3 text-amber-500" />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="border-gray-700 text-black hover:text-amber-500 hover:bg-gray-800">Share</Button>
+                      <Button variant="outline" className="border-gray-700 text-black hover:text-amber-500 hover:bg-black">Share</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-white border-gray-600">
                       <DropdownMenuLabel className="text-black">Social Media</DropdownMenuLabel>
@@ -362,8 +427,28 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
             </Card>
           </div>
         </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="bg-gray-100 text-black">
+          <DialogHeader>
+            <DialogTitle>Your Event</DialogTitle>
+            <DialogDescription>
+              This is your event. You can&apos;t book tickets for your own event.
+            </DialogDescription>
+          </DialogHeader>
+          <Button onClick={() => setDialogOpen(false)} className="mt-4">Close</Button>
+        </DialogContent>
+      </Dialog>
+
       </main>
-     
+      <AnimatePresence>
+        {expandedImage && (
+          <ExpandedImageView
+            src={expandedImage}
+            alt="Expanded event image"
+            onClose={() => setExpandedImage(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

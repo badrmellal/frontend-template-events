@@ -20,6 +20,7 @@ import { JwtPayload, jwtDecode } from 'jwt-decode'
 import { useRouter } from 'next/navigation'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import SidebarAdmin from '@/app/components/sidebar-admin'
 
 interface Ticket {
   id: string
@@ -152,8 +153,9 @@ export default function AdminSupport() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-100 to-purple-100 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-end pr-4 pt-4">
+    <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
+      <SidebarAdmin />
+        <div className="flex justify-end pr-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="flex h-8 w-8 rounded-full">
@@ -187,7 +189,7 @@ export default function AdminSupport() {
           </DropdownMenu>
           </div>
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8 text-center">Support Ticket Management</h1>
+        <h1 className="text-4xl font-bold text-gray-100 mb-8 text-center">Support Ticket Management</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="col-span-1 shadow-lg">
             <CardHeader>

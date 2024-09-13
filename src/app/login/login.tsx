@@ -220,7 +220,7 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="absolute bottom-4 left-4 right-4"
         >
-          <Alert variant="destructive">
+          <Alert className="bg-red-600 text-white" variant="destructive">
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
