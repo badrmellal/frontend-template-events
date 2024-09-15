@@ -137,7 +137,7 @@ const EventDeleteDialog = ({ eventId, onDeleteSuccess }: { eventId: string; onDe
     }
   };
 
-  //  TODO
+  //  TODO 
   // Estimated revenue calc
 
   return (

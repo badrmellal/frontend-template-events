@@ -11,6 +11,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+// TODO: add start to important fields
+
 const DashboardPublisher = ()=> {
     const router = useRouter();
 

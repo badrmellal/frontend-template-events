@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
-interface CustomJwtPayload {
+export interface CustomJwtPayload {
   authorities: string[],
   exp: number
 }

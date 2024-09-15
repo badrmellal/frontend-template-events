@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, MapPin, Zap, X, Search, Minus, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, africanCountries } from '@/app/api/currency/route';
 import "slick-carousel/slick/slick.css";
@@ -18,6 +17,12 @@ import "slick-carousel/slick/slick-theme.css";
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Icons } from "@/components/ui/icons";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { jwtDecode } from "jwt-decode";
+import {CustomJwtPayload} from '../app/(admin)/admin/use-admin-auth'
+import Link from "next/link";
 
 interface Event {
   id: number; 
@@ -80,6 +85,9 @@ export default function Home() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
+  const [isLoggedIn , setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const {toast} = useToast();
     const router = useRouter();
 
@@ -101,6 +109,15 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const user = localStorage.getItem('token')
+    if (!user) throw new Error("No token found");
+
+    user ? setIsLoggedIn(true) : setIsLoggedIn(false);
+
+    const decodedToken = jwtDecode<CustomJwtPayload>(user);
+    const userAuthorities = decodedToken.authorities;
+    userAuthorities.includes("user:delete") ? setIsAuthorized(true) : "";
+
     const results = events.filter(event =>
       (event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.eventCategory.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -190,15 +207,65 @@ export default function Home() {
     autoplay: true,
     autoplaySpeed: 3000,
   };
+  const handleLogOut = () => {
+    setIsLoading(true)
+    localStorage.removeItem("token")
+    router.push('/login')
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-gray-900 to-black text-white">
     <div className="w-full max-w-7xl pt-8 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-8">
         <NavigationMenuHome />
-        <Button variant="outline" onClick={handleLoginClick} className="text-black border-white hover:bg-gray-100">
-          Login / Register
-        </Button>
+    {
+      !isLoggedIn  ? 
+      <Button variant="outline" onClick={handleLoginClick} className="text-black border-white hover:bg-gray-100">
+      Login / Register
+     </Button>
+     :
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="flex h-8 w-8 rounded-full">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="/profile_avatar.png" alt="Avatar" />
+              <AvatarFallback>AD</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>My Account</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {
+            isAuthorized &&  
+            <Link href="admin/dashboard">
+              <DropdownMenuItem>
+                <Icons.user className="mr-2 h-4 w-4" />
+                <span>Admin Dashboard</span>
+              </DropdownMenuItem>
+            </Link>        
+          }
+          <DropdownMenuItem>
+            <Icons.user className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Icons.settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Icons.headset className="mr-2 h-4 w-4" />
+            <span>Support</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogOut}>
+                <Icons.logOut className="mr-2 h-4 w-4" />
+                <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    }
+        
       </div>
       <div className="text-center py-16 sm:py-20">
         <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600">

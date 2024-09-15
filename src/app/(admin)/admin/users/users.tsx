@@ -72,6 +72,8 @@ interface User {
   lastLoginDate: Date;
 }
 
+// TODO: filter users by roles
+
 export default function UsersDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
