@@ -26,6 +26,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { formatCurrency, africanCountries, getCurrencyByCountryCode } from '@/app/api/currency/route';
 import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
+import { motion } from 'framer-motion';
+
 
 interface EventFormInputs {
     eventName: string;
@@ -93,6 +95,7 @@ const CreateEvent: React.FC = () => {
     const { toast } = useToast();
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [previewImages, setPreviewImages] = useState<string[]>([]);
+    const [isCreatingEvent, setIsCreatingEvent] = useState(false);
 
 
     const handleCountryChange = (value: string) => {
@@ -262,6 +265,7 @@ const CreateEvent: React.FC = () => {
             return;
         }
 
+        setIsCreatingEvent(true);
         const data = new FormData();
         Object.entries(formData).forEach(([key, value]) => {
             if (key === 'eventImages') {
@@ -306,6 +310,7 @@ const CreateEvent: React.FC = () => {
                 },
             });
             if (response.status === 200){
+                setIsCreatingEvent(false);
                 toast({
                     title: "Event created successfully!",
                     description: "Congratulations on publishing a new event."
@@ -337,6 +342,7 @@ const CreateEvent: React.FC = () => {
 
             }
         } catch (error: any) {
+            setIsCreatingEvent(false);
             console.error('Error creating event:', error);
             if(error.response && error.response.status === 401) {
                 setIsTokenExpired(true);
@@ -349,6 +355,15 @@ const CreateEvent: React.FC = () => {
             }
         }
     };
+
+     // Custom Spinner component
+  const Spinner = () => (
+    <motion.div
+      className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+    />
+  );
 
     const handleLogOut = () => {
         localStorage.removeItem("token");
@@ -675,9 +690,27 @@ const CreateEvent: React.FC = () => {
                         </CardContent>
                     </Card>
                 </div>
+                <Dialog open={isCreatingEvent} onOpenChange={setIsCreatingEvent}>
+                    <DialogContent className="sm:max-w-[425px] max-w-[370px] bg-gray-950 text-white">
+                    <div className="flex flex-col items-center justify-center p-4">
+                        <Spinner />
+                        <h2 className="mt-4 text-xl font-semibold">Creating Your Event</h2>
+                        <p className="mt-2 text-gray-400 text-center">
+                        Please wait while we set up your amazing event...
+                        </p>
+                        <motion.div
+                        className="mt-4 text-amber-500"
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                        This may take a few moments
+                        </motion.div>
+                    </div>
+                    </DialogContent>
+                </Dialog>
 
                 <Dialog open={isTokenExpired} onOpenChange={setIsTokenExpired}>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="sm:max-w-[425px] max-w-[370px]">
                         <DialogHeader>
                             <DialogTitle>Token Expired</DialogTitle>
                             <DialogDescription>
