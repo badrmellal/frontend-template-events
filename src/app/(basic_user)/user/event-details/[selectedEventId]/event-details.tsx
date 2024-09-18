@@ -217,7 +217,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
         </div>
         <div className="container grid gap-6 p-4 md:grid-cols-3 md:p-6 lg:gap-10">
           <div className="md:col-span-2">
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Event Details</CardTitle>
               </CardHeader>
@@ -252,13 +252,13 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                 <Separator className="bg-gray-700" />
                 <div>
                   <h3 className="mb-2 text-lg font-semibold text-white">About This Event</h3>
-                  <p className="text-sm text-gray-300">{event.eventDescription}</p>
+                  <p className="text-sm text-gray-400">{event.eventDescription}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
           <div className="space-y-6">
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Ticket Information</CardTitle>
               </CardHeader>
@@ -295,11 +295,11 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                 )}
                 <Button className="w-full bg-amber-500 text-black hover:bg-amber-600" onClick={handleBuyTickets}>
                   <Ticket className="mr-2 h-4 w-4" />
-                  {event.isFreeEvent ? 'Reserve Ticket' : 'Buy Tickets'}
+                  {event.isFreeEvent ? 'Get My Ticket' : 'Continue Booking'}
                 </Button>
               </CardContent>
             </Card>
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Event Organizer</CardTitle>
               </CardHeader>
@@ -338,7 +338,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-gray-900 border-gray-700">
+            <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Share This Event</CardTitle>
               </CardHeader>

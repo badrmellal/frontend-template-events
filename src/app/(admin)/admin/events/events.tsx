@@ -20,6 +20,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Separator } from '@/components/ui/separator';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { IoIosPricetags } from 'react-icons/io';
 
 interface Event {
   id: string;
@@ -28,7 +29,7 @@ interface Event {
   eventDescription: string;
   eventImages: string[];
   eventVideo: string | null;
-  eventPrice: number;
+  ticketTypes: TicketType[];
   eventCurrency: string;
   isFreeEvent: boolean;
   approved: boolean;
@@ -38,6 +39,13 @@ interface Event {
   totalTickets: number;
   soldTickets: number;
   eventManagerUsername: string;
+}
+
+interface TicketType {
+  name: string;
+  price: number;
+  totalTickets: number;
+  remainingTickets: number;
 }
 
 interface ExpandableImageProps {
@@ -134,10 +142,7 @@ const EventDetailsDrawer: React.FC<{ event: Event; onViewDetails: (event: Event)
                     <MapPin className="mr-2 h-4 w-4 text-gray-500" />
                     {event.addressLocation}
                   </p>
-                  <p className="flex items-center">
-                    <DollarSign className="mr-2 h-4 w-4 text-gray-500" />
-                    {event.isFreeEvent ? "Free" : `${event.eventPrice} ${event.eventCurrency}`}
-                  </p>
+     
                   <p className="flex items-center">
                     <Ticket className="mr-2 h-4 w-4 text-gray-500" />
                     {event.soldTickets} / {event.totalTickets} tickets sold
@@ -149,7 +154,16 @@ const EventDetailsDrawer: React.FC<{ event: Event; onViewDetails: (event: Event)
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold mb-2">Description</h3>
+              <h3 className="font-semibold mb-2">Ticket Types</h3>
+              <div className="space-y-2">
+                {event.ticketTypes.map((ticket, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span>{ticket.name}</span>
+                    <span>{ticket.price} {event.eventCurrency}</span>
+                  </div>
+                ))}
+              </div>
+                <h3 className="font-semibold mt-4 mb-2">Description</h3>
                 <p className="text-sm">{event.eventDescription}</p>
               </div>
             </div>
@@ -505,12 +519,12 @@ const AdminEvents: React.FC = () => {
           </div>
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {displayedEvents.map((event) => (
-                <Card key={event.id} className="bg-gray-100 text-black overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <Card key={event.id} className="bg-gray-50 text-black overflow-hidden hover:shadow-xl transition-shadow duration-300">
                   <CardHeader className="relative p-4">
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-xl font-bold">{event.eventName}</CardTitle>
@@ -592,8 +606,19 @@ const AdminEvents: React.FC = () => {
                         {format(parseISO(event.eventDate), "PPP p")}
                       </p>
                       <p className="flex items-center">
-                        <DollarSign className="inline-block mr-2 h-4 w-4 text-gray-400" />
-                        {event.eventPrice} {event.eventCurrency}
+                        <IoIosPricetags className="inline-block mr-2 h-4 w-4 text-gray-400" />
+                        {event.isFreeEvent ? (
+                          "Free Event"
+                        ) : (
+                          <>
+                            {event.ticketTypes.length > 0 ? (
+                              `${Math.min(...event.ticketTypes.map(t => t.price))} - ${Math.max(...event.ticketTypes.map(t => t.price))} ${event.eventCurrency}`
+                            ) : (
+                              "Price not set"
+                            )}
+                          </>
+                        )}
+                      
                       </p>
                       <p className="flex items-center">
                         <Ticket className="inline-block mr-2 h-4 w-4 text-gray-400" />

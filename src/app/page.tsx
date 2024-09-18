@@ -4,25 +4,29 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import Slider from "react-slick";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { NavigationMenuHome } from "./components/navbar-home";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MapPin, Zap, X, Search, Minus, Plus } from "lucide-react";
+import { Calendar, MapPin, Zap, X, Search, Minus, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, africanCountries } from '@/app/api/currency/route';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Icons } from "@/components/ui/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { jwtDecode } from "jwt-decode";
-import {CustomJwtPayload} from '../app/(admin)/admin/use-admin-auth'
+import { JwtPayload, jwtDecode } from "jwt-decode";
 import Link from "next/link";
+import { motion } from "framer-motion"
+import { handleAuthRedirect } from './components/auth-redirect'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FaUserCircle } from "react-icons/fa";
+import { MdAdminPanelSettings } from "react-icons/md";
+
 
 interface Event {
   id: number; 
@@ -62,6 +66,11 @@ interface BookingDetails {
   total: number;
 }
 
+interface CustomJwtPayload extends JwtPayload {
+  authorities: string[],
+  exp: number
+}
+
 const eventCategories = [
   'Night Party',
   'Swimming Party',
@@ -82,16 +91,55 @@ export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [isLoggedIn , setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [userRole, setUserRole] = useState<'basic' | 'publisher' | 'admin' | null>(null);
   const {toast} = useToast();
-    const router = useRouter();
+  const router = useRouter();
+  const pathname = usePathname();
+
+
+  const validateToken = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsLoggedIn(false);
+      return false;
+    }
+
+    try {
+      const decodedToken = jwtDecode<CustomJwtPayload>(token);
+      if (decodedToken.exp * 1000 < Date.now()) {
+        setIsLoggedIn(false);
+        setUserRole(null);
+        localStorage.removeItem('token');
+        return false;
+      }
+      setIsLoggedIn(true);
+      if (decodedToken.authorities.includes("user:delete")) {
+        setUserRole('admin');
+        setIsAuthorized(true);
+      } else if (decodedToken.authorities.includes("event:create")) {
+        setUserRole('publisher');
+      } else {
+        setUserRole('basic');
+      }
+      return true;
+    } catch (error) {
+      console.error("Error decoding token:", error);
+      setIsLoggedIn(false);
+      setUserRole(null);
+      localStorage.removeItem('token');
+      return false;
+    }
+  };
 
   useEffect(() => {
+    validateToken();
     const fetchData = async () => {
       try {
         const eventsResponse = await axios.get<Event[]>("http://localhost:8080/events/home");
@@ -109,15 +157,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const user = localStorage.getItem('token')
-    if (!user) throw new Error("No token found");
-
-    user ? setIsLoggedIn(true) : setIsLoggedIn(false);
-
-    const decodedToken = jwtDecode<CustomJwtPayload>(user);
-    const userAuthorities = decodedToken.authorities;
-    userAuthorities.includes("user:delete") ? setIsAuthorized(true) : "";
-
     const results = events.filter(event =>
       (event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.eventCategory.toLowerCase().includes(searchTerm.toLowerCase())) &&
@@ -136,21 +175,51 @@ export default function Home() {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
-
- 
-
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);
     setSelectedTicketType(event.ticketTypes[0]); // Default to first ticket type
     setTicketQuantity(1);
-    setIsDrawerOpen(true);
+    setIsSheetOpen(true)
+    setIsDescriptionExpanded(false)
+  };
+
+  const toggleDescription = () => {
+    setIsDescriptionExpanded(!isDescriptionExpanded)
+  }
+
+  const handleDashboardClick = () => {
+    switch (userRole) {
+      case 'admin':
+        router.push('/admin/dashboard');
+        break;
+      case 'publisher':
+        router.push('/publisher/dashboard');
+        break;
+      case 'basic':
+        router.push('/user/dashboard');
+        break;
+      default:
+        toast({
+          title: "Error",
+          description: "Unable to determine user role.",
+          variant: "destructive"
+        });
+    }
   };
 
   const handleBookNow = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/sign-up");
-    } else if (selectedEvent && selectedTicketType) {
+
+    if (!validateToken()) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to continue.",
+        variant: "default"
+      });
+      handleAuthRedirect(router, pathname);
+      return;
+    }
+  
+    if (selectedEvent && selectedTicketType) {
       const bookingDetails: BookingDetails = {
         eventId: selectedEvent.id,
         ticketType: selectedTicketType.name,
@@ -161,13 +230,13 @@ export default function Home() {
         total: calculateTotal()
       };
       localStorage.setItem('currentBooking', JSON.stringify(bookingDetails));
-      router.push(`user/event-details/${selectedEvent.id}`); //  to event details page
+      router.push(`user/event-details/${selectedEvent.id}`);
     } else {
       toast({
         title: "Error",
         description: "Select ticket type.",
         variant: "destructive"
-      })
+      });
     }
   };
 
@@ -207,64 +276,55 @@ export default function Home() {
     autoplay: true,
     autoplaySpeed: 3000,
   };
-  const handleLogOut = () => {
-    setIsLoading(true)
-    localStorage.removeItem("token")
-    router.push('/login')
-  }
+
+   const handleLogOut = () => {
+    setIsLoading(true);
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setIsAuthorized(false);
+    setIsLoading(false);
+    router.push('/login');
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-gray-900 to-black text-white">
     <div className="w-full max-w-7xl pt-8 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-8">
         <NavigationMenuHome />
-    {
-      !isLoggedIn  ? 
-      <Button variant="outline" onClick={handleLoginClick} className="text-black border-white hover:bg-gray-100">
-      Login / Register
-     </Button>
-     :
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="flex h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="/profile_avatar.png" alt="Avatar" />
-              <AvatarFallback>AD</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {
-            isAuthorized &&  
-            <Link href="admin/dashboard">
-              <DropdownMenuItem>
-                <Icons.user className="mr-2 h-4 w-4" />
-                <span>Admin Dashboard</span>
+        {!isLoggedIn ? (
+            <Button variant="outline" onClick={handleLoginClick} className="text-black border-white hover:bg-gray-100">
+              Login / Register
+            </Button>
+          ) : (
+            <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="flex h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="/profile_avatar.png" alt="Avatar" />
+                  <AvatarFallback>AD</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDashboardClick}>
+                <FaUserCircle className="mr-2 h-4 w-4 text-gray-500" />
+                <span>My Dashboard</span>
               </DropdownMenuItem>
-            </Link>        
-          }
-          <DropdownMenuItem>
-            <Icons.user className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Icons.settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Icons.headset className="mr-2 h-4 w-4" />
-            <span>Support</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogOut}>
+              {userRole === 'admin' && (
+                <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
+                  <MdAdminPanelSettings className="mr-2 h-4 w-4 text-gray-500" />
+                  <span>Admin Dashboard</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={handleLogOut}>
                 <Icons.logOut className="mr-2 h-4 w-4" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    }
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          )}
         
       </div>
       <div className="text-center py-16 sm:py-20">
@@ -370,7 +430,7 @@ export default function Home() {
                       <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">Free</span>
                     ) : (
                       <span className="bg-amber-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                        From {formatCurrency(Math.min(...event.ticketTypes.map(t => t.price)), event.countryCode)}
+                        From {formatCurrency(Math.min(...event.ticketTypes.map(t => t.price)), event.eventCurrency)}
                       </span>
                     )}
                     </p>
@@ -391,87 +451,132 @@ export default function Home() {
           </div>
         )}
       </div>
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-      <DrawerContent className="bg-gray-900 text-white border-t border-gray-800 h-[70vh]">
-        <ScrollArea>
-          <DrawerHeader className="border-b border-gray-800 pb-4">
-            <DrawerTitle className="text-2xl font-bold text-amber-400">{selectedEvent?.eventName}</DrawerTitle>
-            <DrawerClose className="absolute right-4 top-4">
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <div className="p-4 max-h-[70vh] overflow-y-auto">
-            <DrawerDescription className="text-gray-400">
-              {selectedEvent?.eventDescription}
-            </DrawerDescription>
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-amber-400" />
-                <span>{selectedEvent && formatDate(selectedEvent.eventDate)}</span>
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="w-full sm:max-w-lg max-w-xs bg-gray-950 text-white border-l border-gray-800">
+          <ScrollArea className="h-[calc(100vh-4rem)] pr-4">
+            <SheetHeader className="border-b border-gray-800 pb-4 mb-6">
+              <SheetTitle className="text-3xl font-bold text-gray-200">{selectedEvent?.eventName}</SheetTitle>
+             
+            </SheetHeader>
+            <div className="space-y-6">
+              {selectedEvent?.eventImages && selectedEvent.eventImages.length > 0 && (
+                <div className="aspect-video relative rounded-lg overflow-hidden">
+                  <Image
+                    src={selectedEvent.eventImages[0]}
+                    alt={selectedEvent.eventName}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div className="relative">
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: isDescriptionExpanded ? 'auto' : '3rem' }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <SheetDescription className="text-gray-300 text-md leading-relaxed">
+                    {selectedEvent?.eventDescription}
+                  </SheetDescription>
+                </motion.div>
+                {selectedEvent?.eventDescription && selectedEvent.eventDescription.length > 100 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2 text-amber-500 hover:text-black"
+                    onClick={toggleDescription}
+                  >
+                    {isDescriptionExpanded ? (
+                      <>
+                        Read Less <ChevronUp className="ml-1 h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Read More <ChevronDown className="ml-1 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
-              <div className="flex items-center">
-                <MapPin className="w-5 h-5 mr-2 text-amber-400" />
-                <span>{selectedEvent?.addressLocation}</span>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center">
+                  <Calendar className="w-5 h-5 mr-2 text-amber-500" />
+                  <span>{selectedEvent && formatDate(selectedEvent.eventDate)}</span>
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-amber-500" />
+                  <span>{selectedEvent?.addressLocation}</span>
+                </div>
+                <div className="flex items-center">
+                  <Zap className="w-5 h-5 mr-2 text-amber-500" />
+                  <span>{selectedEvent?.eventCategory}</span>
+                </div>
+                {selectedEvent?.ticketTypes.some(t => t.remainingTickets > 0) && (
+                  <div className="flex items-center text-yellow-400">
+                    <span>{selectedEvent.ticketTypes.reduce((sum, t) => sum + t.remainingTickets, 0)} tickets left</span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center">
-                <span className="font-semibold mr-2 text-amber-400">Category:</span>
-                <span>{selectedEvent?.eventCategory}</span>
-              </div>
-            </div>
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Select Ticket Type</h3>
-              <Select 
-                value={selectedTicketType?.name} 
-                onValueChange={(value) => setSelectedTicketType(selectedEvent?.ticketTypes.find(t => t.name === value) || null)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select ticket type" />
-                </SelectTrigger>
-                <SelectContent>
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-white">Select Ticket Type</h3>
+                <Select 
+                  value={selectedTicketType?.name} 
+                  onValueChange={(value) => setSelectedTicketType(selectedEvent?.ticketTypes.find(t => t.name === value) || null)}
+                >
+                  <SelectTrigger className="w-full bg-gray-800 text-white border-gray-700">
+                    <SelectValue placeholder="Select ticket type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 text-white border-gray-700">
                   {selectedEvent?.ticketTypes.map((ticketType) => (
-                    <SelectItem key={ticketType.name} value={ticketType.name}>
-                      {ticketType.name} - {formatCurrency(ticketType.price, selectedEvent.countryCode)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Select Quantity</h3>
-              <div className="flex items-center justify-between">
-                <Button onClick={decrementTicketQuantity} variant="outline" size="icon">
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span>{ticketQuantity}</span>
-                <Button onClick={incrementTicketQuantity} variant="outline" size="icon">
-                  <Plus className="h-4 w-4" />
-                </Button>
+                      <SelectItem key={ticketType.name} value={ticketType.name}>
+                        {ticketType.name} - {formatCurrency(ticketType.price, selectedEvent.eventCurrency)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-2">Order Summary</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(calculateSubtotal(), selectedEvent?.countryCode || '')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Fees:</span>
-                  <span>{formatCurrency(2 * ticketQuantity, selectedEvent?.countryCode || '')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT (15%):</span>
-                  <span>{formatCurrency(calculateSubtotal() * 0.15, selectedEvent?.countryCode || '')}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Total:</span>
-                  <span>{formatCurrency(calculateTotal(), selectedEvent?.countryCode || '')}</span>
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-white">Select Quantity</h3>
+                <div className="flex items-center justify-between bg-gray-800 rounded-md p-0.5 max-w-xs max-h-9">
+                  <Button onClick={decrementTicketQuantity} variant="ghost" size="icon" className="text-white hover:text-black">
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="text-sm font-semibold">{ticketQuantity}</span>
+                  <Button onClick={incrementTicketQuantity} variant="ghost" size="icon" className="text-white hover:text-black">
+                    <Plus className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
+              <div className="space-y-4">
+                <h3 className="text-xl font-semibold text-white">Order Summary</h3>
+                <div className="space-y-2 bg-gray-800 rounded-md p-4">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(calculateSubtotal(), selectedEvent?.eventCurrency || '')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Fees:</span>
+                    <span>{formatCurrency(2 * ticketQuantity, selectedEvent?.eventCurrency || '')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>VAT (15%):</span>
+                    <span>{formatCurrency(calculateSubtotal() * 0.15, selectedEvent?.eventCurrency || '')}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-700">
+                    <span>Total:</span>
+                    <span className="text-amber-400">{formatCurrency(calculateTotal(), selectedEvent?.eventCurrency || '')}</span>
+                  </div>
+                </div>
+              </div>
+              <Button 
+                className="w-full py-6 text-lg font-semibold bg-gray-100 hover:bg-amber-500 text-black transition-colors duration-300" 
+                onClick={handleBookNow}
+              >
+                {selectedEvent?.isFreeEvent ? 'Get My Ticket' : 'Book Now'}
+              </Button>
             </div>
+<<<<<<< HEAD
             <Button className="w-full mt-8 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleBookNow}>
               {selectedEvent?.isFreeEvent ? 'Reserve Ticket' : 'Go to event'}
             </Button>
@@ -479,6 +584,11 @@ export default function Home() {
         </ScrollArea>
       </DrawerContent>
       </Drawer>
+=======
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
+>>>>>>> 566857a9fb47e4e271d5de07588ecdabab823c0b
     </main>
   );
 }

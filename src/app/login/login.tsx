@@ -85,12 +85,15 @@ export default function LoginPage() {
         const decodedToken = jwtDecode<CustomJwtPayload>(response.data)
         const userAuthorities = decodedToken.authorities
 
+        const redirectPath = localStorage.getItem('redirectAfterLogin');
+        localStorage.removeItem('redirectAfterLogin');
+
         if (userAuthorities.includes("user:delete")) {
           router.push("/admin/dashboard")
         } else if (userAuthorities.includes("event:create") && userAuthorities.includes("event:update")) {
-          router.push("/publisher/dashboard")
+          router.push(redirectPath || "/publisher/dashboard");
         } else if (userAuthorities.includes("user:read") && userAuthorities.includes("event:read")) {
-          router.push("/user/dashboard")
+          router.push(redirectPath || "/user/dashboard");
         } else {
           router.push("/access-denied")
         }
