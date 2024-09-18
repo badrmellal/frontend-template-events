@@ -576,9 +576,19 @@ export default function Home() {
                 {selectedEvent?.isFreeEvent ? 'Get My Ticket' : 'Book Now'}
               </Button>
             </div>
+<<<<<<< HEAD
+            <Button className="w-full mt-8 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleBookNow}>
+              {selectedEvent?.isFreeEvent ? 'Reserve Ticket' : 'Go to event'}
+            </Button>
+          </div>
+        </ScrollArea>
+      </DrawerContent>
+      </Drawer>
+=======
           </ScrollArea>
         </SheetContent>
       </Sheet>
+>>>>>>> 566857a9fb47e4e271d5de07588ecdabab823c0b
     </main>
   );
 }

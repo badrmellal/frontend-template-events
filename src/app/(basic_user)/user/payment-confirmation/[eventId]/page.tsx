@@ -1,3 +1,19 @@
+<<<<<<< HEAD
+"use client"
+
+import React from "react";
+
+import PageConfirmation from './page-confirmation';
+
+const PaymentConfirmationPage: React.FC = () => {
+
+  return (
+    <PageConfirmation />
+  )
+};
+
+export default PaymentConfirmationPage;
+=======
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -380,3 +396,4 @@ export default function PaymentConfirmation() {
     </div>
   )
 }
+>>>>>>> 566857a9fb47e4e271d5de07588ecdabab823c0b

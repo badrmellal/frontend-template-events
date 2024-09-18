@@ -10,7 +10,7 @@ const EventDetailsPage: React.FC = () => {
 
     console.log('EventDetailsPage rendering, eventId:', eventId);
 
-    return(
+    return (
         <EventDetails eventId={eventId} />
     )
 }
