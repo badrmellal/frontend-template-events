@@ -135,9 +135,6 @@ interface Event {
           }
         );
         try {
-            // Parse the input to ensure it's valid JSON
-          //   const jsonData = JSON.parse(qrValue);
-            // Convert the parsed data back to a JSON string
             const jsonString = JSON.stringify(response.data);
             const url = await QRCode.toDataURL(jsonString, {
               width: 300,
