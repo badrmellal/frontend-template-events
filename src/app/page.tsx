@@ -473,7 +473,7 @@ export default function Home() {
               </div>
             </div>
             <Button className="w-full mt-8 bg-amber-500 hover:bg-amber-600 text-white" onClick={handleBookNow}>
-              {selectedEvent?.isFreeEvent ? 'Reserve Ticket' : 'Proceed to Payment'}
+              {selectedEvent?.isFreeEvent ? 'Reserve Ticket' : 'Go to event'}
             </Button>
           </div>
         </ScrollArea>
