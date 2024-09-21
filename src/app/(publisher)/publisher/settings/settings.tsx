@@ -15,21 +15,10 @@ import { ChevronDownIcon, CreditCard, Facebook, Globe, Headset, Instagram, LogOu
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
+import {africanCountries} from "@/app/api/currency/route";
 
 
-const africanCountries = [
-    { code: 'EG', dial_code: '+20', name: 'Egypt' },
-    { code: 'NG', dial_code: '+234', name: 'Nigeria' },
-    { code: 'KE', dial_code: '+254', name: 'Kenya' },
-    { code: 'ZA', dial_code: '+27', name: 'South Africa' },
-    { code: 'GH', dial_code: '+233', name: 'Ghana' },
-    { code: 'ET', dial_code: '+251', name: 'Ethiopia' },
-    { code: 'TZ', dial_code: '+255', name: 'Tanzania' },
-    { code: 'MA', dial_code: '+212', name: 'Morocco' },
-    { code: 'DZ', dial_code: '+213', name: 'Algeria' },
-    { code: 'TN', dial_code: '+216', name: 'Tunisia' },
-    { code: 'MR', dial_code: '+222', name: 'Mauritania' }
-  ];
+
 
   const socialPlatforms = [
     { value: 'facebook', label: 'Facebook', icon: Facebook },

@@ -24,23 +24,21 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import Image from "next/image";
 import { ChevronDownIcon, CreditCard, Headset, LogOut } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandGroup, CommandItem } from "@/components/ui/command";
 import ReactCountryFlag from "react-country-flag"
+import axios from "axios";
+import parsePhoneNumberFromString from "libphonenumber-js";
+import {
+  Dialog, DialogClose,
+  DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import {africanCountries} from "@/app/api/currency/route";
 
 
-const africanCountries = [
-  { code: 'EG', dial_code: '+20', name: 'Egypt' },
-  { code: 'NG', dial_code: '+234', name: 'Nigeria' },
-  { code: 'KE', dial_code: '+254', name: 'Kenya' },
-  { code: 'ZA', dial_code: '+27', name: 'South Africa' },
-  { code: 'GH', dial_code: '+233', name: 'Ghana' },
-  { code: 'ET', dial_code: '+251', name: 'Ethiopia' },
-  { code: 'TZ', dial_code: '+255', name: 'Tanzania' },
-  { code: 'MA', dial_code: '+212', name: 'Morocco' },
-  { code: 'DZ', dial_code: '+213', name: 'Algeria' },
-  { code: 'TN', dial_code: '+216', name: 'Tunisia' },
-  { code: 'MR', dial_code: '+222', name: 'Mauritania' }
-];
+
 
 
 const RegisteredCard = () => {
@@ -105,6 +103,13 @@ const AddCard = () => {
   )
 }
 
+interface User {
+    id: string
+    username: string
+    email: string
+    phoneNumber: string
+    profileImage: string
+}
 
 const Settings: React.FC = () => {
 
@@ -113,23 +118,43 @@ const Settings: React.FC = () => {
   const [hasRegisteredCard, setHasRegisteredCard] = useState(true)
   const [selectedCountry, setSelectedCountry] = useState(africanCountries[0])
   const [phoneNumber, setPhoneNumber] = useState('')
+  const [input, setInput] = useState({
+    username: "",
+    email: "",
+    phoneNumber: "",
+  })
+  const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  
-
+  const [user, setUser] = useState<User>()
+  const [token, setToken] = useState<string | null>("")
+  const [phoneError, setPhoneError] = useState<string | null>(null)
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()
     }
   }, [selectedCountry])
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const fetchedUser = async () => {
+      if(token) {
+        const response = await axios.get('http://localhost:8080/user/user-info',{
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+        setUser(response.data)
+      console.log(response.data)
+    }
+    }
+    fetchedUser();
+    setToken(token);
+  }, [])
+  ;
   const handleCountrySelect = (country: typeof selectedCountry) => {
     setSelectedCountry(country);
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '')
-    setPhoneNumber(value)
-  }
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -145,6 +170,38 @@ const Settings: React.FC = () => {
     localStorage.removeItem("token");
     window.location.reload();
   }
+    const handleInputChange = (e: { target: { name: any; value: any; }; })=>{
+        setInput({
+            ...input,
+            [e.target.name]: e.target.value
+        })
+  }
+    const handleInfoSave = () => {
+
+        try {
+          setIsLoading(true);
+            const { formattedNumber, countryCode } = storePhoneNumber(input.phoneNumber, selectedCountry.code);
+
+        } catch (error) {
+            console.log(error)
+            setPhoneError(`Invalid ${selectedCountry.name} phone number `);
+        }
+        setIsLoading(false)
+      }
+
+  const storePhoneNumber = (rawNumber: string, country: string) => {
+    // @ts-ignore
+    const phoneNumber = parsePhoneNumberFromString(rawNumber, country);
+
+    if (phoneNumber && phoneNumber.isValid()) {
+      const formattedNumber = phoneNumber.format('E.164'); // Store in E.164 format
+      const countryCode = phoneNumber.country; // Store the country code separately
+      setPhoneError(null)
+      return { formattedNumber, countryCode };
+    } else {
+      throw new Error('Invalid phone number');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -209,11 +266,11 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="username">Username</Label>
-                  <Input id="username" defaultValue="Badr Mellal" />
+                  <Input id="username" name={"username"} onChange={handleInputChange} defaultValue={user?.username} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="badr@example.com" disabled />
+                  <Input id="email" name={"email"} onChange={handleInputChange} type="email" defaultValue={user?.email} />
                 </div>
                 <div className="flex w-full max-w-sm items-center space-x-2">
                   <Popover>
@@ -248,14 +305,44 @@ const Settings: React.FC = () => {
                     ref={inputRef}
                     type="tel"
                     placeholder="Phone number"
-                    value={phoneNumber}
-                    onChange={handlePhoneChange}
+                    value={input.phoneNumber}
+                    onChange={handleInputChange}
                     className="flex-grow"
+                    name={"phoneNumber"}
                   />
                 </div>
+                {
+                    phoneError && <p className="text-red-600 text-sm">{phoneError}</p>
+                }
               </CardContent>
               <CardFooter>
-                <Button>Save changes</Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" disabled={isLoading}>
+                      {isLoading ? "Saving..." : "Save changes"}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Save changes</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to save these changes?
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="sm:justify-start">
+                        <DialogClose asChild>
+                          <Button type="submit" size="sm" className="px-3" variant="default" onClick={handleInfoSave}>
+                            Save
+                          </Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                        <Button type="button" variant="secondary">
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </CardFooter>
             </Card>
           </TabsContent>
