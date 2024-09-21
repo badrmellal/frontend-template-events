@@ -10,9 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, CreditCard, Clock, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, CreditCard, Clock, Calendar, MapPin, AlertTriangle } from "lucide-react";
 import { formatCurrency } from '@/app/api/currency/route';
 import  QRCode  from 'qrcode';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FaApplePay, FaCcAmex, FaCcMastercard, FaCcVisa, FaGooglePay, FaPaypal } from 'react-icons/fa6';
 interface Event {
     id: number;
     eventName: string;
@@ -48,33 +50,13 @@ interface Event {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [resaleAgreed, setResaleAgreed] = useState(false);
     const [promoCode, setPromoCode] = useState('');
+    const [timeLeft, setTimeLeft] = useState(300) // 5 minutes in seconds
+    const [isExpired, setIsExpired] = useState(false)
     const router = useRouter();
     const params = useParams();
     const eventId = params.eventId as string;
-    const [qrValue, setQRValue] = useState({
-        "name": "John Doe",
-        "email": "john@example.com",
-        "phone": "+1234567890",
-      });
+    const [qrValue, setQRValue] = useState();
       const [qrCodeUrl, setQRCodeUrl] = useState('');
-      const generateQRCode = async () => {
-        try {
-          // Parse the input to ensure it's valid JSON
-        //   const jsonData = JSON.parse(qrValue);
-          // Convert the parsed data back to a JSON string
-          const jsonString = JSON.stringify(qrValue);
-          const url = await QRCode.toDataURL(jsonString, {
-            width: 300,
-            margin: 2,
-          });
-          setQRCodeUrl(url);
-          setError('');
-        } catch (err) {
-          console.error('Error generating QR code:', err);
-          setError('Invalid JSON input');
-          setQRCodeUrl('');
-        }
-      };
 
     useEffect(() => {
       const fetchEventAndBookingDetails = async () => {
@@ -100,7 +82,38 @@ interface Event {
       };
   
       fetchEventAndBookingDetails();
-    }, [eventId]);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timer)
+          setIsExpired(true)
+          return 0
+        }
+        return prevTime - 1
+      })
+    }, 1000)
+    // to clean up 
+    return () => {
+      clearInterval(timer)
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    if (isExpired) {
+      localStorage.removeItem('currentBooking')
+    }
+  }, [isExpired])
+
+  const handleExpiredClose = () => {
+    router.push('/')
+  }
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
   
     const handlePayment = async () => {
   
@@ -120,7 +133,6 @@ interface Event {
           router.push('/sign-up');
           return;
         }
-        console.log(booking)
         const response = await axios.post(
           `http://localhost:8080/tickets/purchase/${event.id}`,null
           ,
@@ -135,9 +147,6 @@ interface Event {
           }
         );
         try {
-            // Parse the input to ensure it's valid JSON
-          //   const jsonData = JSON.parse(qrValue);
-            // Convert the parsed data back to a JSON string
             const jsonString = JSON.stringify(response.data);
             const url = await QRCode.toDataURL(jsonString, {
               width: 300,
@@ -171,7 +180,6 @@ interface Event {
         //     }
         //   }
         // }
-        console.log(response.data);
       } catch (error) {
         console.error('Failed to process payment or create ticket:', error);
         setError('Failed to process payment or create ticket. Please try again.');
@@ -195,69 +203,94 @@ interface Event {
     }
   
     return (
-      <div className="min-h-screen bg-gray-900 text-white p-8">
+
+      <div className="min-h-screen bg-black text-white p-8">
+      <Dialog open={isExpired} onOpenChange={setIsExpired}>
+        <DialogContent >
+          <DialogHeader>
+            <DialogTitle>Session Expired</DialogTitle>
+          </DialogHeader>
+          <p>Your booking session has expired. Please start the booking process again.</p>
+          <DialogFooter>
+            <Button onClick={handleExpiredClose} >
+              Return to Home
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+  
         <div className="max-w-6xl mx-auto">
           <Button
             onClick={() => router.back()}
-            className="mb-8 bg-transparent hover:bg-gray-800 text-pink-500"
+            className="mb-8 bg-transparent hover:bg-white hover:text-black hover:border-white text-white border-white"
             variant="outline"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Event Details
           </Button>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <Card className="bg-white border-gray-700">
+              <Card className="bg-gray-950 border-gray-600">
                 <CardHeader>
-                  <CardTitle className="text-2xl font-bold text-white">
+                  <CardTitle className="text-2xl font-bold text-amber-500">
                     {event.isFreeEvent ? 'Booking Confirmation' : 'Payment Details'} for {event.eventName}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {!event.isFreeEvent && (
                     <>
-                      <p className="text-gray-800 mb-4">Select payment method</p>
+                      <p className="text-gray-300 text-sm mb-4">Select payment method</p>
                       <RadioGroup defaultValue="card" onValueChange={setPaymentMethod} className="space-y-4">
-                        <div className="flex items-center space-x-2 border border-gray-700 rounded-lg p-4">
-                          <RadioGroupItem value="card" id="card" />
-                          <Label htmlFor="card" className="flex items-center">
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Debit or credit card
-                          </Label>
-                        </div>
-                        {/* Add more payment methods here */}
-                      </RadioGroup>
+                      <div className="flex items-center space-x-2 border border-gray-500 rounded-lg p-4 hover:border-amber-500 transition-colors">
+                        <RadioGroupItem value="card" id="card" className="text-gray-300" />
+                        <Label htmlFor="card" className="flex text-white items-center cursor-pointer">
+                          <CreditCard className="mr-2 h-4 w-4 text-amber-500" />
+                          Debit or credit card
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 border border-gray-500 rounded-lg p-4 opacity-50 cursor-not-allowed">
+                        <RadioGroupItem value="paypal" id="paypal" disabled className="text-gray-300" />
+                        <Label htmlFor="paypal" className="flex text-white items-center">
+                          <FaPaypal className="mr-2 h-4 w-4 text-blue-500" />
+                          PayPal (Coming Soon)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+  
                       <div className="mt-6">
-                        <p className="text-sm text-gray-800 mb-2">Available Payment Methods</p>
-                        <div className="flex space-x-2">
-                          {/* Add payment method icons here */}
-                          <div className="w-12 h-8 bg-gray-700 rounded"></div>
-                          <div className="w-12 h-8 bg-gray-700 rounded"></div>
-                          <div className="w-12 h-8 bg-gray-700 rounded"></div>
+                        <p className="text-sm text-gray-300 mb-2">Available Payment Methods</p>
+                        <div className="flex text-gray-100 space-x-4">
+                          {/* payment method icons here */}
+                         <FaCcVisa className='h-5 w-5' />
+                         <FaCcMastercard className='h-5 w-5'/>
+                         <FaApplePay className='h-5 w-5'/>
+                         <FaGooglePay className='h-5 w-5'/>
+                         <FaCcAmex className='h-5 w-5'/>
                         </div>
                       </div>
                       <div className="mt-6">
-                        <Label htmlFor="promoCode">Promo code</Label>
+                        <Label className='text-amber-500' htmlFor="promoCode">Promo code</Label>
                         <Input
                           id="promoCode"
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value)}
-                          className="bg-gray-700 border-gray-600 text-white mt-1"
+                          className="bg-gray-800 border-gray-700 text-white mt-1 focus:border-amber-500"
                         />
                       </div>
                     </>
                   )}
                   <div className="mt-6 space-y-4">
-                    <h3 className="text-lg font-semibold">Important to know</h3>
+                    <h3 className="text-lg font-semibold text-gray-300">Important to know</h3>
                     <div className="flex items-start space-x-2">
                       <Checkbox
                         id="terms"
                         checked={termsAccepted}
                         onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                        className="border-amber-500 text-amber-500"
                       />
-                      <Label htmlFor="terms" className="text-sm">
+                      <Label htmlFor="terms" className="text-sm font-light text-white">
                         By checking this box, I confirm that I agree to the{' '}
-                        <a href="#" className="text-pink-500 hover:underline">Terms and Conditions</a> and{' '}
-                        <a href="#" className="text-pink-500 hover:underline">Privacy Policy</a>
+                        <a href="#" className="text-amber-500 font-semibold hover:underline">Terms and Conditions</a> and{' '}
+                        <a href="#" className="text-amber-500 font-semibold hover:underline">Privacy Policy</a>
                       </Label>
                     </div>
                     <div className="flex items-start space-x-2">
@@ -265,9 +298,10 @@ interface Event {
                         id="resale"
                         checked={resaleAgreed}
                         onCheckedChange={(checked) => setResaleAgreed(checked as boolean)}
+                        className="border-amber-500 text-amber-500"
                       />
-                      <Label htmlFor="resale" className="text-sm">
-                        I agree that any re-sale of a ticket on a platform other than webook.com is deemed to be illegal and will therefore result in the account being banned, the ticket will get cancelled, and will not accept any request for ticket or value refund.
+                      <Label htmlFor="resale" className="text-sm font-light text-white">
+                        I agree that any re-sale of a ticket on a platform other than africashowtime.com is deemed to be illegal and will therefore result in the account being banned, the ticket will get cancelled, and will not accept any request for ticket or value refund.
                       </Label>
                     </div>
                   </div>
@@ -275,11 +309,11 @@ interface Event {
               </Card>
             </div>
             <div>
-              <Card className="bg-white border-gray-700">
+              <Card className="bg-gray-950 border-gray-600">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-900">{event.eventName}</CardTitle>
-                  <p className="text-sm text-gray-800">{event.addressLocation}</p>
-                  <p className="text-sm text-gray-800">{new Date(event.eventDate).toLocaleString()}</p>
+                  <CardTitle className="text-xl font-bold text-amber-500">{event.eventName}</CardTitle>
+                  <p className="text-sm text-gray-400">{event.addressLocation}</p>
+                  <p className="text-sm text-gray-400">{new Date(event.eventDate).toLocaleString()}</p>
                 </CardHeader>
                 <CardContent>
                   {event.eventImages && event.eventImages.length > 0 && (
@@ -291,45 +325,38 @@ interface Event {
                       className="rounded-lg object-cover w-full mb-4"
                     />
                   )}
-                  <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-200">Summary</h3>
                   <div className="space-y-2">
-                    <div className="flex justify-between">
+                    <div className="flex text-gray-100 justify-between">
                       <span>{booking.quantity} x {booking.ticketType}</span>
-                      <span>{formatCurrency(booking.price, event.countryCode)}</span>
+                      <span>{formatCurrency(booking.price, event.eventCurrency)}</span>
                     </div>
                     {!event.isFreeEvent && (
                       <>
-                        <div className="flex justify-between text-gray-800">
+                        <div className="flex justify-between text-gray-400">
                           <span>Subtotal</span>
-                          <span>{formatCurrency(booking.price, event.countryCode)}</span>
+                          <span>{formatCurrency(booking.price, event.eventCurrency)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-800">
+                        <div className="flex justify-between text-gray-400">
                           <span>Fees</span>
-                          <span>{formatCurrency(booking.fees, event.countryCode)}</span>
+                          <span>{formatCurrency(booking.fees, event.eventCurrency)}</span>
                         </div>
-                        <div className="flex justify-between text-gray-800">
+                        <div className="flex justify-between text-gray-400">
                           <span>VAT</span>
-                          <span>{formatCurrency(booking.vat, event.countryCode)}</span>
+                          <span>{formatCurrency(booking.vat, event.eventCurrency)}</span>
                         </div>
                       </>
                     )}
-                    <div className="flex justify-between font-bold">
+                    <div className="flex justify-between font-bold text-white">
                       <span>Total</span>
-                      <span>{event.isFreeEvent ? 'Free' : formatCurrency(booking.total, event.countryCode)}</span>
+                      <span>{event.isFreeEvent ? 'Free' : formatCurrency(booking.total, event.eventCurrency)}</span>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center text-sm text-gray-800">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>{new Date(event.eventDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-gray-800">
-                      <MapPin className="mr-2 h-4 w-4" />
-                      <span>{event.addressLocation}</span>
-                    </div>
+                  <div className="mt-4 mb-2">
+                  
                     {event.remainingTickets > 0 && (
                       <div className="flex items-center text-sm text-yellow-400">
-                        <Clock className="mr-2 h-4 w-4" />
+                        <AlertTriangle className="mr-2 h-4 w-4" />
                         <span>{event.remainingTickets} tickets left</span>
                       </div>
                     )}
@@ -339,14 +366,14 @@ interface Event {
             </div>
           </div>
           <div className="mt-8 flex justify-between items-center">
-            <div className="flex items-center text-gray-400">
+          <div className="flex items-center text-yellow-400">
               <Clock className="mr-2 h-4 w-4" />
-              <span>05:47 left</span>
+              <span>{formatTime(timeLeft)} left</span>
             </div>
             <Button
               onClick={handlePayment}
-              className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 text-lg"
-              disabled={!termsAccepted || !resaleAgreed}
+              className="bg-amber-500 hover:bg-amber-600 text-black px-8 py-4 text-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!termsAccepted || !resaleAgreed || isExpired}
             >
               {event.isFreeEvent ? 'Confirm Booking' : 'Proceed to Payment'}
             </Button>
@@ -361,4 +388,3 @@ interface Event {
       </div>
     );
   }
-

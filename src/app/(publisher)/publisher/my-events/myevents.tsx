@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { IoIosPricetags } from "react-icons/io";
 
 interface TicketType {
   name: string;
@@ -496,7 +497,7 @@ const MyEvents: React.FC = () => {
                     )
                   )}
                     <div className={`my-4 pt-3 flex items-center ${
-                      event.approved  ? 'text-green-400' : 'text-yellow-400'
+                      event.approved  ? 'text-green-500' : 'text-yellow-500'
                     }`}>
                       {event.approved ? (
                         <>
@@ -517,7 +518,7 @@ const MyEvents: React.FC = () => {
                     </p>
                      
                     <p className="flex items-center">
-                      <DollarSign className="inline-block mr-2 h-4 w-4 text-gray-500" />
+                      <IoIosPricetags className="inline-block mr-2 h-4 w-4 text-gray-500" />
                       {event.isFreeEvent ? (
                         "Free"
                       ) : (

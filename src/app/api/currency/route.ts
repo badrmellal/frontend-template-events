@@ -29,8 +29,17 @@ export function getCurrencyByCountryCode(countryCode: string): Country['currency
     return country?.currency;
 }
 
-export function formatCurrency(amount: number, countryCode: string): string {
-    const currency = getCurrencyByCountryCode(countryCode);
+export function formatCurrency(amount: number, currencyOrCountryCode: string): string {
+    let currency: Country['currency'] | undefined;
+
+    // first let's check if it's a country code
+    currency = getCurrencyByCountryCode(currencyOrCountryCode);
+
+    // If not found, let's assume it's a currency code
+    if (!currency) {
+        currency = africanCountries.find(c => c.currency.code === currencyOrCountryCode)?.currency;
+    }
+
     if (!currency) return `${amount}`;
 
     return new Intl.NumberFormat('en-US', {
