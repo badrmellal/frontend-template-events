@@ -25,7 +25,7 @@ import { motion } from "framer-motion"
 import { handleAuthRedirect } from './components/auth-redirect'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FaUserCircle } from "react-icons/fa";
-import { MdAdminPanelSettings } from "react-icons/md";
+import { MdAdminPanelSettings, MdOutlineWebhook } from "react-icons/md";
 
 
 interface Event {
@@ -96,7 +96,6 @@ export default function Home() {
   const [ticketQuantity, setTicketQuantity] = useState(1);
   const [isLoggedIn , setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAuthorized, setIsAuthorized] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [userRole, setUserRole] = useState<'basic' | 'publisher' | 'admin' | null>(null);
   const {toast} = useToast();
@@ -122,7 +121,6 @@ export default function Home() {
       setIsLoggedIn(true);
       if (decodedToken.authorities.includes("user:delete")) {
         setUserRole('admin');
-        setIsAuthorized(true);
       } else if (decodedToken.authorities.includes("event:create")) {
         setUserRole('publisher');
       } else {
@@ -244,6 +242,12 @@ export default function Home() {
     router.push("/sign-up");
   }
 
+  const handleTicketTypeChange = (value: string) => {
+    const newSelectedTicketType = selectedEvent?.ticketTypes.find(t => t.name === value) || null;
+    setSelectedTicketType(newSelectedTicketType);
+    setTicketQuantity(1); 
+  };
+
   const incrementTicketQuantity = () => {
     if (selectedTicketType && ticketQuantity < selectedTicketType.remainingTickets) {
       setTicketQuantity(prevQuantity => prevQuantity + 1);
@@ -254,6 +258,10 @@ export default function Home() {
     if (ticketQuantity > 1) {
       setTicketQuantity(prevQuantity => prevQuantity - 1);
     }
+  };
+
+  const getTotalRemainingTickets = (event: Event) => {
+    return event.ticketTypes.reduce((sum, t) => sum + t.remainingTickets, 0);
   };
   
   const calculateSubtotal = () => {
@@ -281,7 +289,6 @@ export default function Home() {
     setIsLoading(true);
     localStorage.removeItem("token");
     setIsLoggedIn(false);
-    setIsAuthorized(false);
     setIsLoading(false);
     router.push('/login');
   };
@@ -312,12 +319,7 @@ export default function Home() {
                 <FaUserCircle className="mr-2 h-4 w-4 text-gray-500" />
                 <span>My Dashboard</span>
               </DropdownMenuItem>
-              {userRole === 'admin' && (
-                <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                  <MdAdminPanelSettings className="mr-2 h-4 w-4 text-gray-500" />
-                  <span>Admin Dashboard</span>
-                </DropdownMenuItem>
-              )}
+    
               <DropdownMenuItem onClick={handleLogOut}>
                 <Icons.logOut className="mr-2 h-4 w-4" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
@@ -438,10 +440,10 @@ export default function Home() {
                       <MapPin className="w-4 h-4 mr-1" />
                       <span className="truncate">{event.addressLocation}</span>
                     </div>
-                    {event.ticketTypes.some(t => t.remainingTickets > 0) && (
+                    {getTotalRemainingTickets(event) > 0 && (
                       <div className="flex items-center text-sm text-yellow-400 mt-2">
                         <Zap className="w-4 h-4 mr-1" />
-                        <span>{event.ticketTypes.reduce((sum, t) => sum + t.remainingTickets, 0)} tickets left</span>
+                        <span>{getTotalRemainingTickets(event)} tickets left</span>
                       </div>
                     )}
                   </div>
@@ -509,12 +511,12 @@ export default function Home() {
                   <span>{selectedEvent?.addressLocation}</span>
                 </div>
                 <div className="flex items-center">
-                  <Zap className="w-5 h-5 mr-2 text-amber-500" />
+                  <MdOutlineWebhook className="w-5 h-5 mr-2 text-amber-500" />
                   <span>{selectedEvent?.eventCategory}</span>
                 </div>
-                {selectedEvent?.ticketTypes.some(t => t.remainingTickets > 0) && (
+                {selectedTicketType && selectedTicketType.remainingTickets > 0 && (
                   <div className="flex items-center text-yellow-400">
-                    <span>{selectedEvent.ticketTypes.reduce((sum, t) => sum + t.remainingTickets, 0)} tickets left</span>
+                    <span>{selectedTicketType.remainingTickets} tickets left</span>
                   </div>
                 )}
               </div>
@@ -522,7 +524,7 @@ export default function Home() {
                 <h3 className="text-xl font-semibold text-white">Select Ticket Type</h3>
                 <Select 
                   value={selectedTicketType?.name} 
-                  onValueChange={(value) => setSelectedTicketType(selectedEvent?.ticketTypes.find(t => t.name === value) || null)}
+                  onValueChange={handleTicketTypeChange}
                 >
                   <SelectTrigger className="w-full bg-gray-800 text-white border-gray-700">
                     <SelectValue placeholder="Select ticket type" />
@@ -537,17 +539,29 @@ export default function Home() {
                 </Select>
               </div>
               <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-white">Select Quantity</h3>
-                <div className="flex items-center justify-between bg-gray-800 rounded-md p-0.5 max-w-xs max-h-9">
-                  <Button onClick={decrementTicketQuantity} variant="ghost" size="icon" className="text-white hover:text-black">
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="text-sm font-semibold">{ticketQuantity}</span>
-                  <Button onClick={incrementTicketQuantity} variant="ghost" size="icon" className="text-white hover:text-black">
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
+            <h3 className="text-xl font-semibold text-white">Select Quantity</h3>
+            <div className="flex items-center justify-between bg-gray-800 rounded-md p-0.5 max-w-xs max-h-9">
+              <Button 
+                onClick={decrementTicketQuantity} 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:text-black"
+                disabled={ticketQuantity <= 1}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="text-sm font-semibold">{ticketQuantity}</span>
+              <Button 
+                onClick={incrementTicketQuantity} 
+                variant="ghost" 
+                size="icon" 
+                className="text-white hover:text-black"
+                disabled={!selectedTicketType || ticketQuantity >= selectedTicketType.remainingTickets}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-white">Order Summary</h3>
                 <div className="space-y-2 bg-gray-800 rounded-md p-4">

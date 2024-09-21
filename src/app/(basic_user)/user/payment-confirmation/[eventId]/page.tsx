@@ -4,11 +4,10 @@ import React from "react";
 
 import PageConfirmation from './page-confirmation';
 
-const PaymentConfirmationPage: React.FC = () => {
+const PaymentConfirmationPage: React.FC = ()=> {
 
-  return (
-    <PageConfirmation />
-  )
-};
+  return <PageConfirmation />
+}
 
 export default PaymentConfirmationPage;
+
