@@ -10,3 +10,4 @@ const PaymentConfirmationPage: React.FC = ()=> {
 }
 
 export default PaymentConfirmationPage;
+

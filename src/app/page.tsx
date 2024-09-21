@@ -66,7 +66,7 @@ interface BookingDetails {
   total: number;
 }
 
-interface CustomJwtPayload extends JwtPayload {
+export interface CustomJwtPayload extends JwtPayload {
   authorities: string[],
   exp: number
 }
