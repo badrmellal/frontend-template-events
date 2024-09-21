@@ -65,6 +65,7 @@ interface EventDetailsProps {
 
 export default function EventDetails({ eventId }: EventDetailsProps) {
   const [event, setEvent] = useState<Event | null>(null);
+  const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -74,7 +75,6 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
       if (!eventId) return;
 
       try {
-        console.log('Fetching event details for eventId:', eventId);
         const token = localStorage.getItem('token')
         const response = await axios.get<Event>(`http://localhost:8080/events/${eventId}`, {
           headers: {
@@ -83,6 +83,16 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
         });
         console.log('Received response:', response.data);
         setEvent(response.data);
+        // here the selected ticket type from localStorage
+        const storedBooking = localStorage.getItem('currentBooking');
+        if (storedBooking) {
+          const bookingDetails = JSON.parse(storedBooking);
+          const selectedTicket = response.data.ticketTypes.find(
+            ticket => ticket.name === bookingDetails.ticketType
+          );
+          setSelectedTicketType(selectedTicket || null);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Failed to fetch event details:', error);
@@ -258,47 +268,35 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
             </Card>
           </div>
           <div className="space-y-6">
-            <Card className="bg-gray-950 border-gray-600">
-              <CardHeader>
-                <CardTitle className="text-white">Ticket Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {event.ticketTypes.length > 0 ? (
-                  <div className="mb-4 space-y-4">
-                    {event.ticketTypes.map((ticketType, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="font-medium text-white">{ticketType.name}</span>
-                          <span className="text-gray-300">
-                            {ticketType.price === 0 ? 'Free' : formatCurrency(ticketType.price, event.countryCode)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-400">Remaining</span>
-                          <span className="text-sm text-gray-300">{ticketType.remainingTickets}</span>
-                        </div>
-                        <Separator className="bg-gray-700" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mb-4 space-y-2">
+          <Card className="bg-gray-950 border-gray-600">
+            <CardHeader>
+              <CardTitle className="text-white">Selected Ticket</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selectedTicketType ? (
+                <div className="mb-4 space-y-4">
+                  <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="font-medium text-white">Price</span>
-                      <span className="text-gray-300">{event.isFreeEvent ? 'Free' : 'Paid Event'}</span>
+                      <span className="font-medium text-white">{selectedTicketType.name}</span>
+                      <span className="text-gray-300">
+                        {selectedTicketType.price === 0 ? 'Free' : formatCurrency(selectedTicketType.price, event.countryCode)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-medium text-white">Remaining Tickets</span>
-                      <span className="text-gray-300">{event.totalTickets}</span>
+                      <span className="text-sm text-gray-400">Remaining</span>
+                      <span className="text-sm text-gray-300">{selectedTicketType.remainingTickets}</span>
                     </div>
                   </div>
-                )}
-                <Button className="w-full bg-amber-500 text-black hover:bg-amber-600" onClick={handleBuyTickets}>
-                  <Ticket className="mr-2 h-4 w-4" />
-                  {event.isFreeEvent ? 'Get My Ticket' : 'Continue Booking'}
-                </Button>
-              </CardContent>
-            </Card>
+                </div>
+              ) : (
+                <p className="text-gray-300">No ticket selected</p>
+              )}
+              <Button className="w-full bg-amber-500 text-black hover:bg-amber-600" onClick={handleBuyTickets}>
+                <Ticket className="mr-2 h-4 w-4" />
+                {event.isFreeEvent ? 'Get My Ticket' : 'Continue Booking'}
+              </Button>
+            </CardContent>
+          </Card>
             <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-white">Event Organizer</CardTitle>

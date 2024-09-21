@@ -120,6 +120,10 @@ export default function PaymentConfirmation() {
   }
 
   const handlePayment = async () => {
+    if (isExpired) {
+      setError('Booking session has expired. Please start a new booking.');
+      return;
+    }
     if (!termsAccepted || !resaleAgreed) {
       setError('Please accept the terms and conditions to proceed.')
       return
@@ -202,24 +206,24 @@ export default function PaymentConfirmation() {
   return (
 
     <div className="min-h-screen bg-black text-white p-8">
-    <Dialog open={isExpired} onOpenChange={setIsExpired}>
-      <DialogContent >
-        <DialogHeader>
-          <DialogTitle>Session Expired</DialogTitle>
-        </DialogHeader>
-        <p>Your booking session has expired. Please start the booking process again.</p>
-        <DialogFooter>
-          <Button onClick={handleExpiredClose} >
-            Return to Home
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Dialog open={isExpired} onOpenChange={() => {}}>
+        <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Session Expired</DialogTitle>
+          </DialogHeader>
+          <p>Your booking session has expired. Please start the booking process again.</p>
+          <DialogFooter>
+            <Button onClick={handleExpiredClose}>
+              Return to Home
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-6xl mx-auto">
         <Button
           onClick={() => router.back()}
-          className="mb-8 bg-transparent hover:bg-white hover:text-black hover:border-white text-white border-white"
+          className="mb-8 hover:bg-black hover:text-white text-black "
           variant="outline"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Event Details
@@ -229,7 +233,7 @@ export default function PaymentConfirmation() {
             <Card className="bg-gray-950 border-gray-600">
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-amber-500">
-                  {event.isFreeEvent ? 'Booking Confirmation' : 'Payment Details'} for {event.eventName}
+                  {event.isFreeEvent ? 'Booking Confirmation' : 'Payment Confirmation'} for {event.eventName}
                 </CardTitle>
               </CardHeader>
               <CardContent>

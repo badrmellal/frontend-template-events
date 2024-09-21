@@ -21,25 +21,25 @@ import { Separator } from "@/components/ui/separator";
 const components: { title: string; href: string; description: string }[] = [
   {
     title: "For individuals",
-    href: "/home/individuals",
+    href: "/docs/individuals",
     description:
       "Selling tickets as individuals? Once we verify your identity you can start selling tickets.",
   },
   {
     title: "For organizations",
-    href: "/home/organizations",
+    href: "/docs/organizations",
     description:
       "Selling tickets as a registered business? Create and sell tickets to your live event.",
   },
   {
     title: "Virtual events",
-    href: "/home/virtual-events",
+    href: "/docs/virtual-events",
     description:
       "Host and sell tickets to online experiences like webinars and classes from anywhere in the world.",
   },
   {
     title: "Promote event",
-    href: "/home/promote-event",
+    href: "/docs/promote-event",
     description: "Start promoting your event in 5 min.",
   }
 ]
@@ -106,10 +106,10 @@ export function NavigationMenuHome() {
             </NavigationMenuContent>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/pricing" legacyBehavior passHref>
+            <Link href="/qrcode" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Pricing
-              </NavigationMenuLink>
+                QR Code Guide
+              </NavigationMenuLink> 
             </Link>
           </NavigationMenuItem>
          
@@ -178,9 +178,9 @@ export function NavigationMenuHome() {
               <DollarSign className="h-5 w-5" />
               Sell Tickets
             </Link>
-            <Link href="/pricing" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
+            <Link href="/qrcode" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
               <FileChartColumnIncreasing className="h-5 w-5" />
-              Pricing
+              QR Code Guide
             </Link>
             <Link href="/faqs" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
               <FileQuestion className="h-5 w-5" />
