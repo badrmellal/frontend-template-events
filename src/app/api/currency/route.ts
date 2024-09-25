@@ -1,5 +1,5 @@
 
-interface Country {
+export interface Country {
     code: string;
     dial_code: string;
     name: string;
@@ -22,6 +22,12 @@ export const africanCountries: Country[] = [
     { code: 'DZ', dial_code: '+213', name: 'Algeria', currency: { code: 'DZD', name: 'Algerian Dinar', symbol: 'DA' } },
     { code: 'TN', dial_code: '+216', name: 'Tunisia', currency: { code: 'TND', name: 'Tunisian Dinar', symbol: 'DT' } },
     { code: 'MR', dial_code: '+222', name: 'Mauritania', currency: { code: 'MRU', name: 'Mauritanian Ouguiya', symbol: 'UM' } },
+    { code: 'SN', dial_code: '+221', name: 'Senegal', currency: { code: 'XOF', name: 'West African CFA franc', symbol: 'CFA' } },
+    { code: 'CG', dial_code: '+242', name: 'Congo', currency: { code: 'XAF', name: 'Central African CFA franc', symbol: 'FCFA' } },
+    { code: 'CM', dial_code: '+237', name: 'Cameroon', currency: { code: 'XAF', name: 'Central African CFA franc', symbol: 'FCFA' } },
+    { code: 'CI', dial_code: '+225', name: 'Côte d\'Ivoire', currency: { code: 'XOF', name: 'West African CFA franc', symbol: 'CFA' } },
+    { code: 'GA', dial_code: '+241', name: 'Gabon', currency: { code: 'XAF', name: 'Central African CFA franc', symbol: 'FCFA' } },
+    { code: 'ZW', dial_code: '+263', name: 'Zimbabwe', currency: { code: 'ZWL', name: 'Zimbabwean Dollar', symbol: 'Z$' } },
 ];
 
 export function getCurrencyByCountryCode(countryCode: string): Country['currency'] | undefined {

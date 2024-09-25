@@ -25,7 +25,8 @@ import { motion } from "framer-motion"
 import { handleAuthRedirect } from './components/auth-redirect'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FaUserCircle } from "react-icons/fa";
-import { MdAdminPanelSettings, MdOutlineWebhook } from "react-icons/md";
+import { MdAdminPanelSettings, MdOutlineWebhook, MdSupportAgent } from "react-icons/md";
+import { FcSupport } from "react-icons/fc";
 
 
 interface Event {
@@ -205,6 +206,10 @@ export default function Home() {
     }
   };
 
+  const handleSupportClick = () => {
+    router.push("/support");
+  }
+
   const handleBookNow = () => {
 
     if (!validateToken()) {
@@ -317,11 +322,15 @@ export default function Home() {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDashboardClick}>
                 <FaUserCircle className="mr-2 h-4 w-4 text-gray-500" />
-                <span>My Dashboard</span>
+                <span>Dashboard</span>
+              </DropdownMenuItem> 
+              <DropdownMenuItem onClick={handleSupportClick}>
+                <MdSupportAgent className="mr-2 h-4 w-4 text-gray-500" />
+                <span>Support</span>
               </DropdownMenuItem>
     
               <DropdownMenuItem onClick={handleLogOut}>
-                <Icons.logOut className="mr-2 h-4 w-4" />
+                <Icons.logOut className="mr-2 h-4 w-4 text-gray-500" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

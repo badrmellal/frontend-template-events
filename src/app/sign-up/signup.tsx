@@ -1,5 +1,4 @@
-
-import { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import axios from 'axios'
@@ -12,77 +11,119 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Icons } from '@/components/ui/icons'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Info } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  accountType: string;
+  isOrganization: boolean;
+}
+
+interface FormErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  accountType?: string;
+}
+
+const ACCOUNT_TYPES = [
+  { label: "I want to buy tickets", value: "ROLE_BASIC_USER" },
+  { label: "I want to publish an event", value: "ROLE_PUBLISHER" },
+]
 
 export default function SignUp() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const [dirty, setDirty] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [confirmPassword, setConfirmPassword] = useState('')
   const { toast } = useToast()
 
-  const roles = [
-    { label: "I want to buy tickets", value: "ROLE_BASIC_USER" },
-    { label: "I want to publish an event", value: "ROLE_PUBLISHER" },
-  ]
+  const [formData, setFormData] = useState<FormData>({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    accountType: '',
+    isOrganization: false,
+  })
 
-  const validateEmail = (email: string) => {
-    const regex = /\S+@\S+\.\S+/
-    return regex.test(email)
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showOrganizationTooltip, setShowOrganizationTooltip] = useState(false)
+
+  const validateForm = useCallback(() => {
+    const newErrors: FormErrors = {}
+    
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required"
+    }
+
+    if (!formData.email.trim() || !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address"
+    }
+
+    if (formData.password.length < 7 || !/^(?=.*[a-zA-Z])(?=.*[0-9])/.test(formData.password)) {
+      newErrors.password = "Password must be at least 7 characters long and contain both letters and numbers"
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match"
+    }
+
+    if (!formData.accountType) {
+      newErrors.accountType = "Please select an account type"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [formData])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleValidation = useCallback(() => {
-    const newErrors: { [key: string]: string } = {}
-    const validPassword = /^(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)
+  const handleAccountTypeChange = (value: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      accountType: value,
+      isOrganization: value !== 'ROLE_PUBLISHER' ? false : prev.isOrganization
+    }))
+  }
 
-    if (dirty) {
-      if (!validateEmail(email)) {
-        newErrors.email = "Please enter a valid email address."
-      }
-      if (password.length < 7) {
-        newErrors.password = "Password must be at least 7 characters long."
-      }
-      if (!validPassword) {
-        newErrors.password = "Password must contain both letters and numbers."
-      }
-      if (password !== confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match."
-      }
-      if (!role) {
-        newErrors.role = "Please select the account type."
-      }
+  const handleOrganizationChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, isOrganization: checked }))
+  }
+
+  const getFinalRole = () => {
+    if (formData.accountType === 'ROLE_PUBLISHER' && formData.isOrganization) {
+      return 'ROLE_ORGANIZATION_OWNER'
     }
-    setErrors(newErrors)
-  }, [email, password, role, dirty, confirmPassword])
-
-  useEffect(() => {
-    handleValidation()
-  }, [handleValidation])
+    return formData.accountType
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setDirty(true)
-    handleValidation()
-
-    if (Object.keys(errors).length > 0) {
-      return
-    }
+    if (!validateForm()) return
 
     setIsLoading(true)
-    setError(null)
+    const finalRole = getFinalRole()
+    const endpoint = "http://localhost:8080/user/register"
 
     try {
       const response = await axios.post(
-        "http://localhost:8080/user/register",
-        new URLSearchParams({ username, email, password, role }),
+        endpoint,
+        new URLSearchParams({ 
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          role: finalRole
+        }),
         {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -95,28 +136,30 @@ export default function SignUp() {
           title: "Account created successfully!",
           description: "Please confirm your email then log in."
         })
-        setTimeout(()=>{
-          router.push("/login")
-        }, 3000)
+        setTimeout(() => router.push("/login"), 3000)
       }
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status
+      if (axios.isAxiosError(err) && err.response) {
+        const status = err.response.status
         if (status === 409) {
           toast({ 
-            title: "Please try again!",
+            title: "Registration failed",
             description: "Email or username already exists.",
             variant: "destructive"
           })
         } else {
           toast({ 
-            title: "Please try again!",
-            description: "Failed to create your account.",
+            title: "Registration failed",
+            description: "An error occurred while creating your account.",
             variant: "destructive"
           })
         }
       } else {
-        setError("An unexpected error occurred. Please try again.")
+        toast({ 
+          title: "Registration failed",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive"
+        })
       }
     } finally {
       setIsLoading(false)
@@ -124,17 +167,13 @@ export default function SignUp() {
   }
 
   const handleGoogleSignUp = () => {
-    //  Google sign-up logic later
-    console.log("Google sign-up")
+    // Placeholder for google sign-up logic
+    console.log(`google sign-up`)
   }
 
   const handleAppleSignUp = () => {
-    //  Apple sign-up logic later
-    console.log("Apple sign-up")
-  }
-
-  const handleLoginClick = () => {
-    router.push("/login")
+    // Placeholder for apple sign-up logic
+    console.log(`apple sign-up`)
   }
 
   return (
@@ -155,12 +194,10 @@ export default function SignUp() {
                   <Label htmlFor="username">Username</Label>
                   <Input
                     id="username"
+                    name="username"
                     type="text"
-                    value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value)
-                      setDirty(true)
-                    }}
+                    value={formData.username}
+                    onChange={handleInputChange}
                     required
                   />
                   {errors.username && <p className="text-sm text-red-500">{errors.username}</p>}
@@ -169,15 +206,13 @@ export default function SignUp() {
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value)
-                      setDirty(true)
-                    }}
+                    value={formData.email}
+                    onChange={handleInputChange}
                     required
                   />
-                   <span className="italic text-xs font-extralight text-gray-500">This email will be verified. You will use it to access your tickets.</span>
+                  <span className="italic text-xs font-extralight text-gray-500">This email will be verified. You will use it to access your tickets.</span>
                   {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
@@ -185,12 +220,10 @@ export default function SignUp() {
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value)
-                        setDirty(true)
-                      }}
+                      value={formData.password}
+                      onChange={handleInputChange}
                       required
                     />
                     <button
@@ -198,11 +231,7 @@ export default function SignUp() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                   {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
@@ -212,12 +241,10 @@ export default function SignUp() {
                   <div className="relative">
                     <Input
                       id="confirmPassword"
+                      name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value)
-                        setDirty(true)
-                      }}
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
                       required
                     />
                     <button
@@ -225,33 +252,63 @@ export default function SignUp() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                     >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                   {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="role">Account Type</Label>
-                  <Select onValueChange={(value) => setRole(value)} value={role}>
+                  <Label htmlFor="accountType">Account Type</Label>
+                  <Select onValueChange={handleAccountTypeChange} value={formData.accountType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select account type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.value} value={role.value}>
-                          {role.label}
+                      {ACCOUNT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
+                  {errors.accountType && <p className="text-sm text-red-500">{errors.accountType}</p>}
                 </div>
+                {formData.accountType === 'ROLE_PUBLISHER' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="isOrganization"
+                        className="rounded"
+                        checked={formData.isOrganization}
+                        onCheckedChange={handleOrganizationChange}
+                      />
+                      <Label htmlFor="isOrganization" className="flex items-center">
+                        I am registering as an organization
+                        <TooltipProvider>
+                          <Tooltip open={showOrganizationTooltip} onOpenChange={setShowOrganizationTooltip}>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                className="p-0 h-auto ml-1"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  setShowOrganizationTooltip(!showOrganizationTooltip)
+                                }}
+                              >
+                                <Info className="h-4 w-4 text-gray-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Please select this only if you are representing an organization</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </Label>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Button className="w-full mt-6" type="submit" disabled={isLoading || Object.keys(errors).length > 0}>
+              <Button className="w-full mt-6" type="submit" disabled={isLoading}>
                 {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
                 Sign Up
               </Button>
@@ -265,14 +322,14 @@ export default function SignUp() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Button disabled={!role} onClick={handleGoogleSignUp} variant="outline">
+              <Button onClick={handleGoogleSignUp} variant="outline" disabled={!formData.accountType}>
                 <Icons.google className="mr-2 h-4 w-4" /> Google
               </Button>
-              <Button disabled={!role} onClick={handleAppleSignUp} variant="outline">
+              <Button onClick={handleAppleSignUp} variant="outline" disabled={!formData.accountType}>
                 <Icons.apple className="mr-2 h-4 w-4" /> Apple
               </Button>
             </div>
-            {!role && (
+            {!formData.accountType && (
               <p className="text-sm text-red-500 mt-2 text-center">
                 Please select an account type to enable social sign-up options.
               </p>
@@ -281,25 +338,13 @@ export default function SignUp() {
           <CardFooter className="flex flex-col items-center">
             <p className="text-sm text-muted-foreground mt-4">
               Already have an account?{" "}
-              <Button onClick={handleLoginClick} variant="ghost">
+              <Button onClick={() => router.push("/login")} variant="ghost">
                 Log in
               </Button>
             </p>
           </CardFooter>
         </Card>
       </div>
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-4 left-4 right-4"
-        >
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </motion.div>
-      )}
     </div>
   )
 }
