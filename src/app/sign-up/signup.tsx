@@ -136,7 +136,7 @@ export default function SignUp() {
           title: "Account created successfully!",
           description: "Please confirm your email then log in."
         })
-        setTimeout(() => router.push("/login"), 3000)
+          setTimeout(() => router.push("/login"), 2000);
       }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
