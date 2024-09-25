@@ -1,4 +1,3 @@
-'use client'
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -88,7 +87,23 @@ export default function LoginPage() {
         const redirectPath = localStorage.getItem('redirectAfterLogin');
         localStorage.removeItem('redirectAfterLogin');
 
-        if (userAuthorities.includes("user:delete")) {
+        if (userAuthorities.includes("member:add")) {
+          // first we check if onboarding is complete
+          const onboardingStatus = await axios.get(
+            "http://localhost:8080/organizations/onboarding-status",
+            {
+              headers: {
+                Authorization: `Bearer ${response.data}`
+              }
+            }
+          )
+          
+          if (onboardingStatus.data.isComplete) {
+            router.push("/organization/dashboard")
+          } else {
+            router.push("/organization/onboarding")
+          }
+        } else if (userAuthorities.includes("user:delete")) {
           router.push("/admin/dashboard")
         } else if (userAuthorities.includes("event:create") && userAuthorities.includes("event:update")) {
           router.push(redirectPath || "/publisher/dashboard");
