@@ -7,10 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Showtime Africa",
-  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Showtime Africa is your gateway to the continent's most exciting gatherings.",
-  icons: {
-    icon: "/favicon-logo.png",
-  },
+  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Showtime Africa is your gateway to the continent's most exciting gatherings."
 };
 
 export default function RootLayout({

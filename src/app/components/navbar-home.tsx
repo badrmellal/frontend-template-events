@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { FaMapLocationDot, FaInstagram, FaYoutube, FaFacebook, FaLinkedin } from "react-icons/fa6";
+import { FaMapLocationDot, FaInstagram, FaYoutube, FaFacebook, FaLinkedin, FaChevronUp, FaChevronDown } from "react-icons/fa6";
 import { cn } from "@/lib/utils"
 import {
   NavigationMenu,
@@ -13,7 +13,7 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
-import { DollarSign, FileChartColumnIncreasing, FileQuestion, Mail, Menu, ShieldAlert, Ticket } from "lucide-react";
+import { DollarSign, FileChartColumnIncreasing, FileQuestion, HandCoins, LucideIcon, Mail, MapPin, Menu, ShieldAlert, Ticket } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -49,7 +49,41 @@ const socialLinks = [
   { icon: FaFacebook, href: "https://facebook.com", label: "Facebook" },
   { icon: FaYoutube, href: "https://youtube.com", label: "YouTube" },
   { icon: FaLinkedin, href: "https://linkedin.com", label: "LinkedIn" },
-]
+];
+
+interface ExpandableMenuItemProps {
+  title: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+}
+
+const ExpandableMenuItem: React.FC<ExpandableMenuItemProps> = ({ title, icon: Icon, children }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  return (
+    <div className="border-b border-gray-200">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full px-4 py-3 text-left text-gray-800 hover:bg-gray-50 transition-colors duration-200"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="h-5 w-5 text-gray-600" />
+          <span className="font-medium">{title}</span>
+        </div>
+        <FaChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`} />
+      </button>
+      <div 
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="px-4 py-2 bg-gray-50">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export function NavigationMenuHome() {
   return (
@@ -106,7 +140,7 @@ export function NavigationMenuHome() {
             </NavigationMenuContent>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link href="/qrcode" legacyBehavior passHref>
+            <Link href="/docs/qrcode" legacyBehavior passHref>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                 QR Code Guide
               </NavigationMenuLink> 
@@ -152,8 +186,8 @@ export function NavigationMenuHome() {
         </NavigationMenuList>
       </NavigationMenu>
 
-      {/* Mobile Navigation */}
-      <Sheet>
+        {/* Mobile Navigation */}
+        <Sheet>
         <SheetTrigger asChild>
           <Button
             variant="outline"
@@ -164,40 +198,50 @@ export function NavigationMenuHome() {
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-          <nav className="grid gap-6 py-4">
-            <Link href="/" className="flex items-center gap-2 font-semibold px-2">
-              <FaMapLocationDot className="h-6 w-6" />
-              <span className="">Africa Showtime</span>
+        <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+          <nav className="h-full flex flex-col bg-white">
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <Link href="/" className="flex items-center gap-2 font-semibold text-gray-800">
+                <FaMapLocationDot className="h-6 w-6 text-amber-500" />
+                <span className="text-lg">Africa Showtime</span>
+              </Link>
+            </div>
+            <Link href="/events-in-my-area" className="flex items-center gap-3 px-4 py-6 text-gray-800 hover:bg-gray-50 transition-colors">
+              <MapPin className="h-5 w-5 text-amber-600" /> 
+              <span className="font-semibold">Events in My Area</span>
             </Link>
-            <Link href="#" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <Ticket className="h-5 w-5" />
-              Buy Tickets
-            </Link>
-            <Link href="#" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <DollarSign className="h-5 w-5" />
-              Sell Tickets
-            </Link>
-            <Link href="/qrcode" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <FileChartColumnIncreasing className="h-5 w-5" />
-              QR Code Guide
-            </Link>
-            <Link href="/faqs" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <FileQuestion className="h-5 w-5" />
-              FAQ&apos;s
-            </Link>
-            <Separator />
-            <Link href="/support" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <Mail className="h-5 w-5" />
-              Contact us
-            </Link>
-            <Link href="/privacy-policy" className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500 hover:text-gray-800">
-              <ShieldAlert className="h-5 w-5" />
-              Privacy Policy
-            </Link>
-            <Separator />
-            <div className="flex items-center gap-4 rounded-xl px-3 py-2 text-gray-500">
-              <span className="font-medium">Follow us</span>
+            <div className="flex-grow overflow-y-auto py-2">
+              <ExpandableMenuItem title="Buy Tickets" icon={Ticket}>
+                <Link href="/popular-events" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">Popular Events</Link>
+                <Link href="/free-events" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">Free Events</Link>
+                <Link href="/experiences" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">Experiences</Link>
+              </ExpandableMenuItem>
+              <ExpandableMenuItem title="Sell Tickets" icon={HandCoins}>
+                <Link href="/docs/individuals" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">For individuals</Link>
+                <Link href="/docs/organizations" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">For organizations</Link>
+                <Link href="/docs/virtual-events" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">Virtual events</Link>
+                <Link href="/docs/promote-event" className="block py-2 text-sm text-gray-600 hover:text-amber-500 transition-colors">Promote event</Link>
+              </ExpandableMenuItem>
+              <Link href="/docs/qrcode" className="flex items-center gap-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors">
+                <FileChartColumnIncreasing className="h-5 w-5 text-gray-600" />
+                <span className="font-medium">QR Code Guide</span>
+              </Link>
+              <Link href="/faqs" className="flex items-center gap-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors">
+                <FileQuestion className="h-5 w-5 text-gray-600" />
+                <span className="font-medium">FAQ&apos;s</span>
+              </Link>
+              <Separator className="my-2" />
+              <Link href="/support" className="flex items-center gap-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors">
+                <Mail className="h-5 w-5 text-gray-600" />
+                <span className="font-medium">Contact us</span>
+              </Link>
+              <Link href="/privacy-policy" className="flex items-center gap-3 px-4 py-3 text-gray-800 hover:bg-gray-50 transition-colors">
+                <ShieldAlert className="h-5 w-5 text-gray-600" />
+                <span className="font-medium">Privacy Policy</span>
+              </Link>
+            </div>
+            <div className="mt-auto p-4 bg-gray-50 border-t border-gray-200">
+              <p className="text-sm font-medium text-gray-700 mb-3">Follow us</p>
               <div className="flex gap-4">
                 {socialLinks.map((social) => (
                   <a
@@ -205,9 +249,9 @@ export function NavigationMenuHome() {
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-500 hover:text-gray-800"
+                    className="text-gray-500 hover:text-amber-500 transition-colors"
                   >
-                    <social.icon className="h-5 w-5" />
+                    <social.icon className="h-6 w-6" />
                     <span className="sr-only">{social.label}</span>
                   </a>
                 ))}

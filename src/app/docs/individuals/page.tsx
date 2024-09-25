@@ -18,8 +18,9 @@ import { NavigationMenuHome } from '@/app/components/navbar-home';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FaUserCircle } from 'react-icons/fa';
-import { MdAdminPanelSettings } from 'react-icons/md';
+import { MdAdminPanelSettings, MdSupportAgent } from 'react-icons/md';
 import { Icons } from '@/components/ui/icons';
+import PricingSection from './pricing-section';
 
 
 interface CustomJwtPayload extends JwtPayload {
@@ -43,14 +44,6 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
     { step: "Go Live", description: "Publish your event and start selling!" },
   ];
 
-  const features = [
-    { icon: Zap, title: "Instant Setup", description: "Create and publish your event in minutes" },
-    { icon: Globe, title: "Sell Anywhere in Africa", description: "Reach a global audience with multi-language support" },
-    { icon: Ticket, title: "Dynamic Pricing", description: "Maximize revenue with different ticket types and prices" },
-    { icon: ShieldCheck, title: "Secure Payments", description: "PCI-compliant transactions and fraud protection" },
-    { icon: QrCode, title: "QR Code Check-in", description: "Scan QR codes for quick attendee check-ins using your mobile" },
-    { icon: BarChart, title: "Real-time Analytics", description: "Track sales and attendance in real-time" },
-  ];
 
   const journeySteps = [
     {
@@ -206,6 +199,10 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
     }
   };
 
+  const handleSupportClick = () => {
+    router.push("/support");
+  }
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
        <div className="w-full max-w-8xl pt-8 px-4 sm:px-6 lg:px-10">
@@ -230,14 +227,12 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDashboardClick}>
                 <FaUserCircle className="mr-2 h-4 w-4 text-gray-500" />
-                <span>My Dashboard</span>
+                <span>Dashboard</span>
               </DropdownMenuItem>
-              {userRole === 'admin' && (
-                <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                  <MdAdminPanelSettings className="mr-2 h-4 w-4 text-gray-500" />
-                  <span>Admin Dashboard</span>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={handleSupportClick}>
+                <MdSupportAgent className="mr-2 h-4 w-4 text-gray-500" />
+                <span>Support</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogOut}>
                 <Icons.logOut className="mr-2 h-4 w-4" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
@@ -376,7 +371,7 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
                 <Button
                   onClick={handlePrevStep}
                   variant="outline"
-                  className="text-black border-white hover:bg-black hover:text-white"
+                  className="text-black border-transparent hover:bg-black hover:text-white"
                 >
                   Previous Step
                 </Button>
@@ -391,6 +386,8 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
           </div>
         </div>
       </section>
+ 
+        <PricingSection />
 
         <div className="my-14 max-w-3xl mx-auto">
         <h2 className="text-3xl text-center font-bold mb-6 text-gray-100">Identity Verification</h2>

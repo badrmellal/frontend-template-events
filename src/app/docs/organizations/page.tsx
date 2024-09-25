@@ -18,7 +18,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FaUserCircle } from 'react-icons/fa'
-import { MdAdminPanelSettings } from 'react-icons/md'
+import { MdAdminPanelSettings, MdSupportAgent } from 'react-icons/md'
 import { Icons } from '@/components/ui/icons'
 
 
@@ -196,6 +196,10 @@ const TicketSellingInfoForOrganizations: React.FC = () => {
     }
   };
 
+  const handleSupportClick = () => {
+    router.push("/support");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
         <div className="w-full max-w-8xl pt-8 px-4 sm:px-6 lg:px-10">
@@ -220,14 +224,13 @@ const TicketSellingInfoForOrganizations: React.FC = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleDashboardClick}>
                 <FaUserCircle className="mr-2 h-4 w-4 text-gray-500" />
-                <span>My Dashboard</span>
+                <span>Dashboard</span>
+              </DropdownMenuItem> 
+              <DropdownMenuItem onClick={handleSupportClick}>
+                <MdSupportAgent className="mr-2 h-4 w-4 text-gray-500" />
+                <span>Support</span>
               </DropdownMenuItem>
-              {userRole === 'admin' && (
-                <DropdownMenuItem onClick={() => router.push('/admin/dashboard')}>
-                  <MdAdminPanelSettings className="mr-2 h-4 w-4 text-gray-500" />
-                  <span>Admin Dashboard</span>
-                </DropdownMenuItem>
-              )}
+
               <DropdownMenuItem onClick={handleLogOut}>
                 <Icons.logOut className="mr-2 h-4 w-4" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
