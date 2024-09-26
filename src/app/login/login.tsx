@@ -236,7 +236,7 @@ export default function LoginPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-4 left-4 right-4"
+          className="absolute bottom-4 right-4"
         >
           <Alert className="bg-red-600 text-white" variant="destructive">
             <AlertTitle>Error</AlertTitle>
