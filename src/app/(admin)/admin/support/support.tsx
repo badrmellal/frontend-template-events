@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import SidebarAdmin from '@/app/components/sidebar-admin'
+import Footer from '@/app/components/footer'
 
 interface Ticket {
   id: string
@@ -152,8 +153,16 @@ export default function AdminSupport() {
     router.push('/login')
   }
 
+  const handleSettingClick = () =>{
+    router.push('/admin/settings')
+  }
+  const handleDashboardClick = () =>{
+    router.push('/admin/dashboard')
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-r from-gray-900 to-black py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black sm:pl-12 pl-0">
+      <div className="py-12 px-4 sm:px-6 lg:px-8">
       <SidebarAdmin />
         <div className="flex justify-end pr-4">
           <DropdownMenu>
@@ -168,27 +177,24 @@ export default function AdminSupport() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Icons.user className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+              <DropdownMenuItem onClick={handleDashboardClick}>
+                <Icons.user className="mr-2 h-4 w-4 text-gray-500" />
+                <span>Dashboard</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icons.settings className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={handleSettingClick}>
+                <Icons.settings className="mr-2 h-4 w-4 text-gray-500" />
                 <span>Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Icons.headset className="mr-2 h-4 w-4" />
-                <span>Support</span>
-              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogOut}>
-                <Icons.logOut className="mr-2 h-4 w-4" />
+                <Icons.logOut className="mr-2 h-4 w-4 text-gray-500" />
                 <span>{isLoading ? 'Logging out...' : 'Log out'}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           </div>
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl py-6 mx-auto">
         <h1 className="text-4xl font-bold text-gray-100 mb-8 text-center">Support Ticket Management</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <Card className="col-span-1 shadow-lg">
@@ -308,6 +314,8 @@ export default function AdminSupport() {
           </Card>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

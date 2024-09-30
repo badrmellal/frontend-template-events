@@ -11,6 +11,7 @@ import SidebarAdmin from "@/app/components/sidebar-admin"
 import { Area, AreaChart, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import Footer from '@/app/components/footer'
 
 export default function DashboardAdmin() {
   const router = useRouter()
@@ -240,6 +241,7 @@ export default function DashboardAdmin() {
             </div>
           </div>
         </main>
+      <Footer />
       </div>
     </div>
   )

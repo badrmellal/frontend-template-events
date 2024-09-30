@@ -14,6 +14,7 @@ import SidebarPublisher from "@/app/components/sidebar-publisher"
 import Image from "next/image"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TicketDetails from "./ticket-details"
+import Footer from "@/app/components/footer"
 
 interface Ticket {
   id: string
@@ -258,6 +259,8 @@ export default function Tickets() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <Footer />
     </div>
   )
 }

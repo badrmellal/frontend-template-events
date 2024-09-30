@@ -26,6 +26,7 @@ import { FaFacebook, FaInstagram, FaTiktok, FaTwitter } from 'react-icons/fa6';
 import { jwtDecode } from 'jwt-decode';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SidebarPublisher from '@/app/components/sidebar-publisher';
+import Footer from '@/app/components/footer';
 
 interface Event {
   id: number;
@@ -34,7 +35,6 @@ interface Event {
   eventDescription: string;
   eventImages: string[];
   ticketTypes: TicketType[];
-  eventPrice: number;
   eventCurrency: string;
   isFreeEvent: boolean;
   eventManagerUsername: string;
@@ -449,6 +449,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
           />
         )}
       </AnimatePresence>
+      <Footer />
     </div>
   )
 }

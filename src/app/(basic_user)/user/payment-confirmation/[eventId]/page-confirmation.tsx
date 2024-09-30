@@ -15,6 +15,9 @@ import { formatCurrency } from '@/app/api/currency/route';
 import  QRCode  from 'qrcode';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FaApplePay, FaCcAmex, FaCcMastercard, FaCcVisa, FaGooglePay, FaPaypal } from 'react-icons/fa6';
+import Footer from '@/app/components/footer';
+
+
 interface Event {
     id: number;
     eventName: string;
@@ -379,12 +382,17 @@ interface Event {
             </Button>
             {qrCodeUrl && (
                 <div className="generated-view">
-                    <img src={qrCodeUrl} alt="qr code" />
+                    <Image 
+                    src={qrCodeUrl} 
+                    alt="qr code"
+                    width={250}
+                    height={250} />
                     <a href={qrCodeUrl}/>
                 </div>
                 )}
           </div>
         </div>
+        <Footer />
       </div>
     );
   }

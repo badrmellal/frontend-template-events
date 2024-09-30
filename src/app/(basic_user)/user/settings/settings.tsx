@@ -36,6 +36,7 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import {africanCountries} from "@/app/api/currency/route";
+import Footer from "@/app/components/footer";
 
 
 
@@ -416,6 +417,7 @@ const Settings: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <Footer />
     </div>
   )
 }

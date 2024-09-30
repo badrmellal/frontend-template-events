@@ -50,24 +50,17 @@ const OrganizationOnboarding: React.FC = () => {
 
   const getRegistrationNumberTooltip = (country: string) => {
     const tooltips: { [key: string]: string } = {
-        "NG": "RC Number for Nigeria",
-        "KE": "KRA PIN for Kenya",
-        "ZA": "CIPC Registration Number for South Africa",
-        "GH": "Tax Identification Number (TIN) for Ghana",
-        "MA": "Identifiant Commun de l'Entreprise (ICE) for Morocco",
-        "EG": "Tax Registration Number for Egypt",
-        "DZ": "Numéro d'Immatriculation Fiscale (NIF) for Algeria",
-        "TZ": "Tax Identification Number (TIN) for Tanzania",
-        "TN": "Matricule Fiscal for Tunisia",
-        "MR": "Numéro d'Immatriculation Fiscale (NIF) for Mauritania",
-        "SN": "NINEA (Numéro d'Identification Nationale des Entreprises et Associations) for Senegal",
-        "CG": "Numéro d'Immatriculation au Registre du Commerce et du Crédit Mobilier (RCCM) for Congo",
-        "CM": "Numéro du Registre de Commerce for Cameroon",
-        "CI": "Numéro du Registre du Commerce et du Crédit Mobilier (RCCM) for Côte d'Ivoire",
-        "GA": "Numéro d'Immatriculation au Registre du Commerce (RC) for Gabon",
-        "ZW": "Business Partner Number (BP Number) for Zimbabwe",
-        "ET": "Tax Identification Number (TIN) for Ethiopia"
-    };
+      "EG": "Tax Registration Number for Egypt",
+      "KE": "KRA PIN for Kenya",
+      "ZA": "CIPC Registration Number for South Africa",
+      "GH": "Tax Identification Number (TIN) for Ghana",
+      "MA": "Identifiant Commun de l'Entreprise (ICE) for Morocco",
+      "TZ": "Tax Identification Number (TIN) for Tanzania",
+      "SN": "NINEA (Numéro d'Identification Nationale des Entreprises et Associations) for Senegal",
+      "CI": "Numéro du Registre du Commerce et du Crédit Mobilier (RCCM) for Côte d'Ivoire",
+      "UG": "Tax Identification Number (TIN) for Uganda",
+      "ZM": "Taxpayer Identification Number (TPIN) for Zambia"
+  };
 
     return tooltips[country] || "Registration Number";
 };

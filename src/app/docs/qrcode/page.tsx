@@ -20,6 +20,8 @@ import { FaUserCircle } from 'react-icons/fa'
 import { MdSupportAgent } from 'react-icons/md'
 import { Icons } from '@/components/ui/icons'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import QRCodeFAQSection from './qrcode-faqs'
+import Footer from '@/app/components/footer'
 
 type Step = {
   icon: React.ElementType;
@@ -278,36 +280,6 @@ const QRCodeDemo: React.FC<{ userType: UserType }> = ({ userType }) => {
   )
 }
 
-const FAQSection: React.FC = () => {
-  return (
-    <section className="mb-16">
-      <h2 className="text-3xl font-semibold mb-8 text-center">Frequently Asked Questions</h2>
-      <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="item-1">
-          <AccordionTrigger>What if I lose my QR code?</AccordionTrigger>
-          <AccordionContent>
-            If you lose your QR code, you can easily access it by logging into your account. You can also find a copy in your registered email.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="item-2">
-          <AccordionTrigger>Can I share my QR code with others?</AccordionTrigger>
-          <AccordionContent>
-            No, your QR code is unique to you and should not be shared. Each QR code can only be used once for event entry.
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="item-3">
-          <AccordionTrigger>What if my QR code doesn&apos;t scan?</AccordionTrigger>
-          <AccordionContent>
-            If your QR code doesn&apos;t scan, please see an event staff member for assistance. They can manually check you in.
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </section>
-  )
-}
-
-
-
 
 
 
@@ -486,7 +458,7 @@ const QRCodeGuide: React.FC = () => {
 
         <QRCodeDemo userType={activeTab} />
 
-        <FAQSection />
+        <QRCodeFAQSection activeTab={activeTab} />  
 
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -510,6 +482,7 @@ const QRCodeGuide: React.FC = () => {
           </section>
         </motion.div>
       </main>
+      <Footer />
     </div>
   )
 }

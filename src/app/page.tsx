@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
 import Slider from "react-slick";
@@ -8,10 +8,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { NavigationMenuHome } from "./components/navbar-home";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, MapPin, Zap, X, Search, Minus, Plus, ChevronUp, ChevronDown } from "lucide-react";
+import { Calendar, MapPin, Zap, X, Search, Minus, Plus, ChevronUp, ChevronDown, Layers3, Music, Waves, Dumbbell, Film, Building2, Mic2, Users, Briefcase } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, africanCountries } from '@/app/api/currency/route';
+import { formatCurrency, africanCountries, getCurrencyByCountryCode, getCountryCodeByCurrency } from '@/app/api/currency/route';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,8 +25,11 @@ import { motion } from "framer-motion"
 import { handleAuthRedirect } from './components/auth-redirect'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FaUserCircle } from "react-icons/fa";
-import { MdAdminPanelSettings, MdOutlineWebhook, MdSupportAgent } from "react-icons/md";
+import { MdAdminPanelSettings, MdCategory, MdEvent, MdOutlineWebhook, MdSupportAgent } from "react-icons/md";
 import { FcSupport } from "react-icons/fc";
+import ReactCountryFlag from "react-country-flag";
+import Footer from "./components/footer";
+import { FaCampground, FaCar, FaGamepad, FaGraduationCap, FaHeart, FaPalette, FaUtensils } from "react-icons/fa6";
 
 
 interface Event {
@@ -73,14 +76,21 @@ export interface CustomJwtPayload extends JwtPayload {
 }
 
 const eventCategories = [
-  'Night Party',
-  'Swimming Party',
-  'Sport & Fitness',
-  'Media & Films',
-  'Government',
-  'Concert',
-  'Conference',
-  'Startups & Business'
+  { name: 'Night Party', icon: Music },
+  { name: 'Swimming Party', icon: Waves },
+  { name: 'Sport & Fitness', icon: Dumbbell },
+  { name: 'Media & Films', icon: Film },
+  { name: 'Government', icon: Building2 },
+  { name: 'Concert', icon: Mic2 },
+  { name: 'Conference', icon: Users },
+  { name: 'Startups & Business', icon: Briefcase },
+  { name: 'Food & Drink', icon: FaUtensils },
+  { name: 'Art & Culture', icon: FaPalette },
+  { name: 'Education', icon: FaGraduationCap },
+  { name: 'Outdoor & Adventure', icon: FaCampground },
+  { name: 'Automotive', icon: FaCar },
+  { name: 'Charity & Causes', icon: FaHeart },
+  { name: 'Gaming', icon: FaGamepad }
 ];
 
 export default function Home() {
@@ -98,7 +108,7 @@ export default function Home() {
   const [isLoggedIn , setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [userRole, setUserRole] = useState<'basic' | 'publisher' | 'admin' | null>(null);
+  const [userRole, setUserRole] = useState<'basic' | 'publisher' | 'admin' | 'organizationOwner' | 'organizationMember' | null>(null);
   const {toast} = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -124,6 +134,10 @@ export default function Home() {
         setUserRole('admin');
       } else if (decodedToken.authorities.includes("event:create")) {
         setUserRole('publisher');
+      } else if(decodedToken.authorities.includes("member:add")){
+        setUserRole('organizationOwner');
+      } else if(decodedToken.authorities.includes("member:read")){
+        setUserRole('organizationMember');
       } else {
         setUserRole('basic');
       }
@@ -160,7 +174,7 @@ export default function Home() {
       (event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         event.eventCategory.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (selectedCategory === "all" || event.eventCategory === selectedCategory) &&
-      (selectedCountry === "all" || event.countryCode === selectedCountry)
+      (selectedCountry === "all" || getCountryCodeByCurrency(event.eventCurrency)  === selectedCountry)
     );
     setFilteredEvents(results);
   }, [searchTerm, events, selectedCategory, selectedCountry]);
@@ -193,6 +207,12 @@ export default function Home() {
         break;
       case 'publisher':
         router.push('/publisher/dashboard');
+        break;
+      case 'organizationMember':
+        router.push('/organization/dashboard');
+        break;
+      case 'organizationOwner':
+        router.push('organization/dashboard');
         break;
       case 'basic':
         router.push('/user/dashboard');
@@ -246,6 +266,11 @@ export default function Home() {
   const handleLoginClick = () => {
     router.push("/sign-up");
   }
+
+  const getCategoryIcon = (categoryName: string) => {
+    const category = eventCategories.find(cat => cat.name === categoryName);
+    return category ? category.icon : MdCategory;
+  };
 
   const handleTicketTypeChange = (value: string) => {
     const newSelectedTicketType = selectedEvent?.ticketTypes.find(t => t.name === value) || null;
@@ -339,15 +364,15 @@ export default function Home() {
         
       </div>
       <div className="text-center py-16 sm:py-20">
-        <h1 className="text-4xl sm:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600">
-          Showtime Africa
+        <h1 className="text-4xl sm:text-5xl font-extrabold pb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600">
+          myticket.africa
         </h1>
         <p className="text-xl sm:text-2xl mb-8 text-gray-300">
-          Discover and Experience the Best Events in Africa
+          Where every event feels like it was made for you
         </p>
       </div>
       <div className="flex flex-col lg:flex-row justify-between items-start mb-8">
-        <div className="w-full lg:w-1/2 mb-4 lg:mb-0">
+        <div className="w-full lg:w-1/2 mb-8 lg:mb-0">
           <div className="relative">
             <Input
               type="text"
@@ -359,20 +384,23 @@ export default function Home() {
             <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
-        <div className="w-full lg:w-auto flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-          <Select onValueChange={setSelectedCategory} value={selectedCategory}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-white bg-opacity-10 text-white border-gray-600">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {eventCategories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="w-full lg:w-auto flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+        <Select onValueChange={setSelectedCategory} value={selectedCategory}>
+          <SelectTrigger className="w-full sm:w-[180px] bg-white bg-opacity-10 text-white border-gray-600">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {eventCategories.map((category) => (
+              <SelectItem key={category.name} value={category.name}>
+                <div className="flex items-center">
+                  <category.icon className="mr-2 h-4 w-4" />
+                  {category.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
           <Select onValueChange={setSelectedCountry} value={selectedCountry}>
             <SelectTrigger className="w-full sm:w-[180px] bg-white bg-opacity-10 text-white border-gray-600">
               <SelectValue placeholder="Country" />
@@ -380,10 +408,21 @@ export default function Home() {
             <SelectContent>
               <SelectItem value="all">All Countries</SelectItem>
               {africanCountries.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
+              <SelectItem key={country.code} value={country.code}>
+                <div className="flex items-center">
+                  <ReactCountryFlag
+                    countryCode={country.code}
+                    svg
+                    style={{
+                      width: '1em',
+                      height: '1em',
+                      marginRight: '0.5em'
+                    }}
+                  />
                   {country.name}
-                </SelectItem>
-              ))}
+                </div>
+              </SelectItem>
+            ))}
             </SelectContent>
           </Select>
         </div>
@@ -463,7 +502,7 @@ export default function Home() {
         )}
       </div>
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-lg max-w-xs bg-gray-950 text-white border-l border-gray-800">
+        <SheetContent className="w-full sm:max-w-md max-w-xs bg-gray-950 text-white border-l border-gray-800">
           <ScrollArea className="h-[calc(100vh-4rem)] pr-4">
             <SheetHeader className="border-b border-gray-800 pb-4 mb-6">
               <SheetTitle className="text-3xl font-bold text-gray-200">{selectedEvent?.eventName}</SheetTitle>
@@ -520,7 +559,9 @@ export default function Home() {
                   <span>{selectedEvent?.addressLocation}</span>
                 </div>
                 <div className="flex items-center">
-                  <MdOutlineWebhook className="w-5 h-5 mr-2 text-amber-500" />
+                  {React.createElement(getCategoryIcon(selectedEvent?.eventCategory || ''), {
+                    className: "w-5 h-5 mr-2 text-amber-500"
+                  })}
                   <span>{selectedEvent?.eventCategory}</span>
                 </div>
                 {selectedTicketType && selectedTicketType.remainingTickets > 0 && (
@@ -602,6 +643,7 @@ export default function Home() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      <Footer />
     </main>
   );
 }

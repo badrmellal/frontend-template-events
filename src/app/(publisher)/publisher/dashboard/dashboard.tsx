@@ -1,3 +1,4 @@
+import Footer from "@/app/components/footer";
 import SidebarPublisher from "@/app/components/sidebar-publisher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -348,9 +349,9 @@ const DashboardPublisher = ()=> {
           </Card>
         </div>
       </main>
-               
-            </div>
-        </div>
+      </div>
+      <Footer />
+    </div>
     )
 }
 export default DashboardPublisher;

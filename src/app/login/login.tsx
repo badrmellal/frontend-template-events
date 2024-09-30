@@ -146,7 +146,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-black flex flex-col md:flex-row items-center justify-center bg-cover bg-center">
       <div className="w-full md:w-1/2 p-4 flex justify-center items-center">
-        <Image src="/logo-with-bg.png" alt="Logo africa event" width={400} height={400} className="max-w-[250px] max-h-[200px] sm:max-h-[380px] sm:max-w-[400px]" />
+      <Image src="/myticket-logo.png" alt="Animated Logo" 
+      width={400} height={400} 
+      className="max-w-[250px] max-h-[200px] sm:max-h-[380px] sm:max-w-[400px]" />
+
       </div>
       <div className="w-full md:w-1/2 p-8 flex justify-center items-center">
         <Card className="w-full max-w-md">
