@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { IoIosPricetags } from "react-icons/io";
+import Footer from '@/app/components/footer';
 
 interface TicketType {
   name: string;
@@ -600,6 +601,8 @@ const MyEvents: React.FC = () => {
           onSave={handleSaveEvent}
         />
       )}
+
+      <Footer />
     </div>
   );
 };

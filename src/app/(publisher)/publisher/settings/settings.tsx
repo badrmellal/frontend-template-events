@@ -16,6 +16,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
 import {africanCountries} from "@/app/api/currency/route";
+import Footer from "@/app/components/footer";
 
 
 
@@ -377,6 +378,7 @@ const SettingPublisher: React.FC = () => {
             </TabsContent>
           </Tabs>
         </div>
+        <Footer />
       </div>
     )
 }

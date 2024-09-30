@@ -27,6 +27,7 @@ import { formatCurrency, africanCountries, getCurrencyByCountryCode } from '@/ap
 import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
 import { motion } from 'framer-motion';
+import Footer from '@/app/components/footer';
 
 
 interface EventFormInputs {

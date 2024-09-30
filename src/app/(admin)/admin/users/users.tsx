@@ -60,6 +60,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
 import SidebarAdmin from "@/app/components/sidebar-admin";
+import Footer from "@/app/components/footer";
 
 
 interface User {
@@ -95,20 +96,26 @@ export default function UsersDashboard() {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        if (response.status === 200) {
+        if (Array.isArray(response.data)) {
           setUsers(response.data);
+        } else {
+          console.error("Unexpected data structure:", response.data);
+          setUsers([]);
         }
       } catch (error) {
         console.error("Error fetching users:", error);
+        setUsers([]);
       }
     };
-
+  
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter((user) =>
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = Array.isArray(users) 
+  ? users.filter((user) =>
+      user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  : [];
 
 
   // Get current users
@@ -274,7 +281,7 @@ export default function UsersDashboard() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-    <div className="w-full max-w-7xl mx-auto p-4 space-y-4 ">
+    <div className="w-full max-w-7xl mx-auto p-4 mb-6 space-y-4 ">
      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-gray-100">User Management</h1>
@@ -394,7 +401,8 @@ export default function UsersDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+            {Array.isArray(currentUsers) && currentUsers.length > 0 ? (
+                currentUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-3">
@@ -419,6 +427,8 @@ export default function UsersDashboard() {
                           ? "destructive"
                           : user.role === "ROLE_PUBLISHER"
                           ? "default"
+                          : user.role === "ROLE_ORGANIZATION_OWNER"
+                          ? "outline"
                           : "secondary"
                       }
                     >
@@ -479,7 +489,14 @@ export default function UsersDashboard() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+               ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -512,6 +529,8 @@ export default function UsersDashboard() {
                       ? "destructive"
                       : user.role === "ROLE_PUBLISHER"
                       ? "default"
+                      : user.role === "ROLE_ORGANIZATION_OWNER"
+                      ? "outline"
                       : "secondary"
                   }
                 >
@@ -692,6 +711,7 @@ export default function UsersDashboard() {
       </AlertDialog>
 
     </div>
+    <Footer />
 </div>
   );
 }

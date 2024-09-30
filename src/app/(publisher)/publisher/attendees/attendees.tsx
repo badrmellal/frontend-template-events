@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select"
 import SidebarPublisher from "@/app/components/sidebar-publisher"
 import Image from "next/image"
+import Footer from "@/app/components/footer"
 
 export default function Attendees() {
 
@@ -223,6 +224,7 @@ export default function Attendees() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

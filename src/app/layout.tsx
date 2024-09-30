@@ -6,9 +6,17 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Showtime Africa",
-  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Showtime Africa is your gateway to the continent's most exciting gatherings."
+  title: "Myticket Africa",
+  description: "Discover and attend the best events happening across Africa, from electrifying music festivals to exclusive private parties and spectacular shows. Myticket Africa is your gateway to the continent's most exciting gatherings.",
+  icons: {
+    icon: [
+      { url: "/myticket-favicon.ico", sizes: "any" },
+      { url: "/myticket-favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/myticket-favicon.png",
+  },
 };
+
 
 export default function RootLayout({
   children,

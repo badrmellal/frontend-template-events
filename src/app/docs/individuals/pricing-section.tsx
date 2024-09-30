@@ -41,7 +41,7 @@ const PricingSection: React.FC = () => {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-white mb-4">
-                4.9% + $0.30 <span className="text-sm font-normal">per ticket sold</span>
+                6.7% + $0.30 <span className="text-sm font-normal">per ticket sold</span>
               </p>
               <ul className="space-y-2">
                 <PricingFeature>Advanced ticketing options</PricingFeature>

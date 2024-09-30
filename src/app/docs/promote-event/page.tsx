@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FaUserCircle } from 'react-icons/fa'
 import { MdSupportAgent } from 'react-icons/md'
 import { Icons } from '@/components/ui/icons'
+import Footer from '@/app/components/footer'
 
 
 interface CustomJwtPayload extends JwtPayload {
@@ -526,6 +527,7 @@ const PromoteYourEvents: React.FC = () => {
           </motion.div>
         </AnimatedSection>
       </main>
+      <Footer />
     </div>
   )
 }

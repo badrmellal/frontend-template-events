@@ -1,5 +1,6 @@
 "use client"
 
+import Footer from "@/app/components/footer";
 import SidebarUser from "@/app/components/sidebar-user";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -86,7 +87,7 @@ const Home = () =>{
             )             
         }
             </div>
-
+        <Footer />
         </div>
     )
 }

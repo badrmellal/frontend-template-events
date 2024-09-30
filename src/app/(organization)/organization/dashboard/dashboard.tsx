@@ -1,3 +1,4 @@
+import Footer from "@/app/components/footer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -284,6 +285,7 @@ const OrganizationDashboard: React.FC = () => {
           </div>
         </section>
       </main>
+      <Footer />
     </div>
     )
 }

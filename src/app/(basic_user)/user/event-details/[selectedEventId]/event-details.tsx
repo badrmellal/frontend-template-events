@@ -25,6 +25,7 @@ import SidebarUser from '@/app/components/sidebar-user';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { FaFacebook, FaInstagram, FaTiktok, FaTwitter } from 'react-icons/fa6';
+import Footer from '@/app/components/footer';
 
 interface Event {
   id: number;
@@ -361,7 +362,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
           </div>
         </div>
       </main>
-     
+     <Footer />
     </div>
   )
 }

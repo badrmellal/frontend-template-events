@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/table"
 import SidebarPublisher from "@/app/components/sidebar-publisher"
 import Image from "next/image"
+import Footer from "@/app/components/footer"
 
 export default function Analytics() {
 
@@ -249,7 +250,7 @@ export default function Analytics() {
           </Card>
         </div>
       </main>
-
+    <Footer />
     </div>
   )
 }

@@ -21,6 +21,7 @@ import { FaUserCircle } from 'react-icons/fa';
 import { MdAdminPanelSettings, MdSupportAgent } from 'react-icons/md';
 import { Icons } from '@/components/ui/icons';
 import PricingSection from './pricing-section';
+import Footer from '@/app/components/footer';
 
 
 interface CustomJwtPayload extends JwtPayload {
@@ -450,7 +451,7 @@ const TicketSellingInfoForIndividuals: React.FC = () => {
           </p>
         </section>
       </main>
-
+      <Footer />
     </div>
   );
 };

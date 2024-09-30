@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { IoIosPricetags } from 'react-icons/io';
+import Footer from '@/app/components/footer';
 
 interface Event {
   id: string;
@@ -505,7 +506,7 @@ const AdminEvents: React.FC = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="container mx-auto py-6 md:py-10 px-2 sm:px-10">
+      <div className="container mx-auto py-6 md:py-8 px-2 sm:pl-8">
         <div className=" p-3 sm:p-8 rounded-lg shadow-lg">
           <h1 className="text-3xl text-white font-bold tracking-tight mb-6">Event Management</h1>
           <div className="flex flex-col sm:flex-row items-center mb-8 space-y-4 sm:space-y-0 sm:space-x-4">
@@ -663,7 +664,7 @@ const AdminEvents: React.FC = () => {
           )}
           
          {/* Pagination */}
-         <Pagination className="mt-8">
+         <Pagination className="my-8">
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious 
@@ -693,6 +694,7 @@ const AdminEvents: React.FC = () => {
             </PaginationContent>
           </Pagination>
         </div>
+        <Footer />
       </div>
 
 
@@ -796,6 +798,7 @@ const AdminEvents: React.FC = () => {
           />
         )}
       </AnimatePresence>
+      
     </div>
   );
 };
