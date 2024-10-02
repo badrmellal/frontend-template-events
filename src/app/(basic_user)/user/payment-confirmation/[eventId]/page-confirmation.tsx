@@ -222,7 +222,7 @@ interface Event {
         </DialogContent>
       </Dialog>
   
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto mb-5">
           <Button
             onClick={() => router.back()}
             className="mb-8 bg-transparent hover:bg-white hover:text-black hover:border-white text-white border-white"

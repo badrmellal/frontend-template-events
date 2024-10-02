@@ -4,7 +4,6 @@ import axios from "axios";
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import {Button} from "@/components/ui/button";
 import {Alert} from "@/components/ui/alert";
-import SidebarPublisher from "@/app/components/sidebar-publisher";
 import {
   DropdownMenu,
   DropdownMenuContent, DropdownMenuItem,
@@ -16,6 +15,7 @@ import Image from "next/image";
 import {Headset, LogOut} from "lucide-react";
 import SidebarUser from "@/app/components/sidebar-user";
 import {Badge} from "@/components/ui/badge";
+import { useRouter } from 'next/navigation';
 
 enum PaymentStatus {
     PENDING = 'PENDING',
@@ -42,6 +42,8 @@ const MyTickets = () => {
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState("All Statuses")
 
+  const route = useRouter();
+
   useEffect(() => {
     const fetchMyTickets = async () => {
       try {
@@ -64,7 +66,7 @@ const MyTickets = () => {
 
   const handleLogOut = () => {
     localStorage.removeItem("token");
-    window.location.reload();
+    route.push('/')
   }
 
   return (

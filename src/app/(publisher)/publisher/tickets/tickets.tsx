@@ -1,8 +1,6 @@
-import Link from "next/link"
-import { useState } from "react"
-import { Calendar, Download, MoreHorizontal, Search, Filter, ArrowUpDown, ChevronDown, ChevronsUpDown, Headset, LogOut } from "lucide-react"
+import { useEffect, useState } from "react"
+import {  Download, MoreHorizontal, Search, Headset, LogOut } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,66 +11,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import SidebarPublisher from "@/app/components/sidebar-publisher"
 import Image from "next/image"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import TicketDetails from "./ticket-details"
 import Footer from "@/app/components/footer"
+import axios from "axios"
+import { jwtDecode } from "jwt-decode"
+import {formatDate} from "date-fns";
 
-interface Ticket {
-  id: string
-  eventName: string
-  customerName: string
-  customerEmail: string
-  ticketType: string
-  purchaseDate: string
-  status: "Valid" | "Used" | "Refunded" 
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  profileImageUrl: string | null;
+  phoneNumber: string | null;
+  role: string | null;
+  joinDate: string | null;
+  lastLoginDate: string | null;
+  lastLoginDateDisplay: string | null;
+  enabled: boolean;
+  verificationToken: string | null;
+  verificationTokenExpiryDate: string | null;
+  countryCode: string | null;
 }
 
-const tickets: Ticket[] = [
-  {
-    id: "T001",
-    eventName: "Summer Beats",
-    customerName: "Alice Johnson",
-    customerEmail: "alice@example.com",
-    ticketType: "VIP",
-    purchaseDate: "2024-06-15",
-    status: "Valid"
-  },
-  {
-    id: "T002",
-    eventName: "Tech Conference",
-    customerName: "Bob Smith",
-    customerEmail: "bob@example.com",
-    ticketType: "Early Bird",
-    purchaseDate: "2024-05-20",
-    status: "Valid"
-  },
-  {
-    id: "T003",
-    eventName: "Summer Beats",
-    customerName: "Charlie Brown",
-    customerEmail: "charlie@example.com",
-    ticketType: "General Admission",
-    purchaseDate: "2024-06-18",
-    status: "Used"
-  },
-  {
-    id: "T004",
-    eventName: "Food & Wine Expo",
-    customerName: "Diana Prince",
-    customerEmail: "diana@example.com",
-    ticketType: "VIP",
-    purchaseDate: "2024-06-10",
-    status: "Refunded"
-  },
-  {
-    id: "T005",
-    eventName: "Tech Conference 2024",
-    customerName: "Ethan Hunt",
-    customerEmail: "ethan@example.com",
-    ticketType: "General Admission",
-    purchaseDate: "2024-05-25",
-    status: "Used"
-  }
-]
+interface Event {
+  id: number;
+  eventCategory: string | null;
+  eventName: string;
+  eventDescription: string;
+  eventVideo: string | null;
+  eventCurrency: string | null;
+  eventManagerUsername: string | null;
+  eventDate: string;
+  addressLocation: string | null;
+  googleMapsUrl: string | null;
+  eventCreationDate: string | null;
+  totalTickets: number;
+  remainingTickets: number;
+  eventImages: string[] | null;
+  ticketTypes: any | null; // You might want to define a more specific type here
+  freeEvent: boolean;
+  approved: boolean;
+}
+
+export interface Ticket {
+  quantity: number;
+  id: string;
+  fees: number;
+  vat: number;
+  totalAmount: number;
+  ticketType: string;
+  paymentStatus: "PENDING"|"COMPLETED"|"FAILED"|"REFUNDED";
+  usersDto: User;
+  eventsDto: Event;
+  ticketActive: boolean;
+  purchaseDate: Date;
+}
+
 
 export default function Tickets() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -80,18 +73,18 @@ export default function Tickets() {
   const [selectedStatus, setSelectedStatus] = useState("All Statuses")
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-
-
-  const filteredTickets = tickets.filter(ticket => 
-    (ticket.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     ticket.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     ticket.customerEmail.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (selectedEvent === "All Events" || ticket.eventName === selectedEvent) &&
-    (selectedStatus === "All Statuses" || ticket.status === selectedStatus)
+  const [tickets, setTickets] = useState<Ticket[] | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const filteredTickets = tickets?.filter(ticket =>
+    (ticket.eventsDto.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     ticket.usersDto.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     ticket.usersDto.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (selectedEvent === "All Events" || ticket.eventsDto.eventName === selectedEvent) &&
+    (selectedStatus === "All Statuses" || ticket.paymentStatus === selectedStatus)
   )
 
-  const events = Array.from(new Set(tickets.map(ticket => ticket.eventName)))
-  const statuses = Array.from(new Set(tickets.map(ticket => ticket.status)))
+  const events = Array.from(new Set(tickets?.map(ticket => ticket.eventsDto.eventName)))
+  const statuses = Array.from(new Set(tickets?.map(ticket => ticket.paymentStatus)))
 
   const handleViewClick = (ticket: Ticket) => {
     setSelectedTicket(ticket)
@@ -114,11 +107,37 @@ export default function Tickets() {
     window.location.reload();
 };
 
+  useEffect(()=>{
+    const fetching = async ()=>{
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('token');
+        //decode token
+        if (token) {
+          const decodedToken = jwtDecode(token);
+          const email = decodedToken.sub;
+          const fetchedTickets = await axios.get(`http://localhost:8080/publisher/tickets-details/${email}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+          )
+          setTickets(fetchedTickets.data);
+        }
+      }catch(err){
+        console.error(err);
+      }finally {
+        setIsLoading(false);
+      }
+    }
+    fetching();
+  },[])
+
   return (
     <div className="flex min-h-screen bg-black flex-col">
      <SidebarPublisher />
-     <div className="flex justify-end pt-4 pr-4">
-           
+     <div className="flex justify-end pt-4 pr-4">  
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button
@@ -204,24 +223,26 @@ export default function Tickets() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTickets.map((ticket) => (
+                    {filteredTickets?.map((ticket) => (
                       <TableRow key={ticket.id}>
                         <TableCell className="font-medium">{ticket.id}</TableCell>
-                        <TableCell>{ticket.eventName}</TableCell>
+                        <TableCell>{ticket.eventsDto.eventName}</TableCell>
                         <TableCell>
-                          <div>{ticket.customerName}</div>
-                          <div className="text-sm text-muted-foreground">{ticket.customerEmail}</div>
+                          <div>{ticket.usersDto.username}</div>
+                          <div className="text-sm text-muted-foreground">{ticket.usersDto.email}</div>
                         </TableCell>
                         <TableCell>{ticket.ticketType}</TableCell>
-                        <TableCell>{ticket.purchaseDate}</TableCell>
+                        <TableCell>{formatDate(ticket.purchaseDate,
+                            "dd MMM yyyy, HH:mm"
+                        )}</TableCell>
                         <TableCell>
                           <Badge variant={
-                            ticket.status === "Valid" ? "default" :
-                            ticket.status === "Used" ? "outline" :
-                            ticket.status === "Refunded" ? "destructive" :
+                            ticket.paymentStatus === "COMPLETED" ? "default" :
+                            ticket.paymentStatus === "PENDING" ? "outline" :
+                            ticket.paymentStatus === "REFUNDED" ? "destructive" :
                             "secondary"
                           }>
-                            {ticket.status}
+                            {ticket.paymentStatus}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -255,7 +276,9 @@ export default function Tickets() {
             <SheetDescription>View and manage ticket information</SheetDescription>
           </SheetHeader>
           <div className="mt-4">
-            <TicketDetails ticket={selectedTicket} />
+            {/*{tickets &&*/}
+            {/*  <TicketDetails ticket={selectedTicket} />*/}
+            {/*}*/}
           </div>
         </SheetContent>
       </Sheet>

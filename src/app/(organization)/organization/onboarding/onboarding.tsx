@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation'
 
 interface FormData {
   country: string;
-  registrationNumber: string;
+  companyRegistrationNumber: string;
   [key: string]: string; 
 }
 
@@ -34,12 +34,12 @@ const OrganizationOnboarding: React.FC = () => {
     lastName: '',
     jobTitle: '',
     organizationName: '',
-    address: '',
-    city: '',
+    organizationAddress: '',
+    organizationCity: '',
     country: '',
     phoneNumber: '',
     businessCategory: '',
-    registrationNumber: ''
+    companyRegistrationNumber: ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showAlert, setShowAlert] = useState(false);
@@ -154,10 +154,11 @@ const OrganizationOnboarding: React.FC = () => {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-
+    console.log(formData.companyRegistrationNumber)
     if (validateStep()) {
       setIsLoading(true);
       const token = localStorage.getItem("token");
+      console.log(formData)
       if(!token){
         router.push("/login")
         return;
@@ -166,8 +167,8 @@ const OrganizationOnboarding: React.FC = () => {
           const response = await axios.post("http://localhost:8080/organizations/create", formData, {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` 
-            }
+              'Authorization': `Bearer ${token}`
+            },
           });
           if (response.status === 201) {
             // marking onboarding as complete
@@ -356,8 +357,8 @@ const OrganizationOnboarding: React.FC = () => {
                 >
                   <div className="space-y-4">
                     {renderField("organizationName", "Organization Name", Building)}
-                    {renderField("address", "Address", MapPin)}
-                    {renderField("city", "City", MapPin)}
+                    {renderField("organizationAddress", "Address", MapPin)}
+                    {renderField("organizationCity", "City", MapPin)}
                     {renderCountrySelect()}
                   </div>
                 </motion.div>

@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import {africanCountries} from "@/app/api/currency/route";
 import Footer from "@/app/components/footer";
+import {useToast} from "@/components/ui/use-toast";
 
 
 
@@ -134,6 +135,7 @@ const Settings: React.FC = () => {
       inputRef.current.focus()
     }
   }, [selectedCountry])
+  const { toast } = useToast()
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -177,17 +179,31 @@ const Settings: React.FC = () => {
             [e.target.name]: e.target.value
         })
   }
-    const handleInfoSave = () => {
+    const handleInfoSave = async () => {
 
         try {
           setIsLoading(true);
             const { formattedNumber, countryCode } = storePhoneNumber(input.phoneNumber, selectedCountry.code);
-
+            setPhoneNumber(formattedNumber);
+            await axios.put('http://localhost:8080/user/update-user-info',{
+              username: input.username,
+              email: user?.email,
+              phoneNumber: formattedNumber,
+              countryCode: countryCode
+            },{
+              headers: {
+                Authorization: `Bearer ${token}`
+              }
+            })
+          setIsLoading(false)
+          toast({
+            description: "Your account infos are updated.",
+          })
         } catch (error) {
             console.log(error)
             setPhoneError(`Invalid ${selectedCountry.name} phone number `);
         }
-        setIsLoading(false)
+
       }
 
   const storePhoneNumber = (rawNumber: string, country: string) => {
@@ -195,8 +211,8 @@ const Settings: React.FC = () => {
     const phoneNumber = parsePhoneNumberFromString(rawNumber, country);
 
     if (phoneNumber && phoneNumber.isValid()) {
-      const formattedNumber = phoneNumber.format('E.164'); // Store in E.164 format
-      const countryCode = phoneNumber.country; // Store the country code separately
+      const formattedNumber = phoneNumber.format('E.164'); 
+      const countryCode = phoneNumber.country;
       setPhoneError(null)
       return { formattedNumber, countryCode };
     } else {
@@ -271,7 +287,7 @@ const Settings: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" name={"email"} onChange={handleInputChange} type="email" defaultValue={user?.email} />
+                  <Input id="email" name={"email"} onChange={handleInputChange} type="email" defaultValue={user?.email} disabled/>
                 </div>
                 <div className="flex w-full max-w-sm items-center space-x-2">
                   <Popover>
@@ -319,7 +335,7 @@ const Settings: React.FC = () => {
               <CardFooter>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" disabled={isLoading}>
+                    <Button variant="outline" disabled={isLoading || input.username.length===0 || input.phoneNumber.length===0}>
                       {isLoading ? "Saving..." : "Save changes"}
                     </Button>
                   </DialogTrigger>
