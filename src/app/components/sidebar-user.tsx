@@ -38,15 +38,15 @@ export default function SidebarUser() {
               className="flex rounded-full bg-black text-white p-2 mr-10 items-center gap-2 text-lg font-semibold"
             >
               <ArrowBigLeftDash className="h-5 w-5" />
-              Africa Events
+              Home
             </Link>
             <Link href="/user/dashboard" className={linkClass('/user/dashboard')}>
               <Home className="h-5 w-5" />
               Dashboard
             </Link>
-            <Link href="/user/my-events" className={linkClass('/user/my-events')}>
+            <Link href="/user/my-events" className={linkClass('/user/upcoming-events')}>
               <PartyPopper className="h-5 w-5" />
-              My upcoming events
+              Upcoming events
             </Link>
             <Link href="/user/virtual-sessions" className={linkClass('/user/virtual-sessions')}>
               <MonitorPlay className="h-5 w-5" />
@@ -71,7 +71,7 @@ export default function SidebarUser() {
             className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-black text-lg font-semibold text-white md:h-8 md:w-8 md:text-base"
           >
             <ArrowBigLeftDash className="h-4 w-4 transition-all group-hover:scale-110" />
-            <span className="sr-only">Africa Events</span>
+            <span className="sr-only">Home</span>
           </Link>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -84,12 +84,12 @@ export default function SidebarUser() {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link href="/user/my-events" className={iconClass('/user/my-events')}>
+              <Link href="/user/upcoming-events" className={iconClass('/user/upcoming-events')}>
                 <PartyPopper className="h-5 w-5" />
-                <span className="sr-only">My upcoming events</span>
+                <span className="sr-only">Upcoming events</span>
               </Link>
             </TooltipTrigger>
-            <TooltipContent side="right">My upcoming events</TooltipContent>
+            <TooltipContent side="right">Upcoming events</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>

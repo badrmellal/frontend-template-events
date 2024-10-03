@@ -26,10 +26,10 @@ enum PaymentStatus {
 
 interface MyTicketsProps {
   quantity: number,
-  fees: number,
-  vat: number,
+  paymentFees: number,
+  commission: number,
   totalAmount: number,
-  isTicketActive: boolean,
+  ticketActive: boolean,
   ticketTypeId: string,
   paymentStatus: PaymentStatus,
   paymentMethod: string
@@ -117,10 +117,10 @@ const MyTickets = () => {
                       </CardHeader>
                       <CardContent>
                         <p><strong>Quantity:</strong> {ticket.quantity}</p>
-                        <p><strong>Fees:</strong> ${ticket.fees.toFixed(2)}</p>
-                        <p><strong>Vat:</strong> ${ticket.vat.toFixed(2)}</p>
+                        <p><strong>Payment Fees:</strong> ${ticket.paymentFees.toFixed(2)}</p>
+                        <p><strong>Commission:</strong> ${ticket.commission.toFixed(2)}</p>
                         <p><strong>Total Amount:</strong> ${ticket.totalAmount.toFixed(2)}</p>
-                        <p><strong>Is Ticket Active:</strong> {ticket.isTicketActive ? 'Yes' : 'No'}</p>
+                        <p><strong>Is Ticket Active:</strong> {ticket.ticketActive ? 'Yes' : 'No'}</p>
                         <Badge className='block w-fit mt-4' variant={
                           ticket.paymentStatus === PaymentStatus.COMPLETED ? "default" :
                           ticket.paymentStatus === PaymentStatus.PENDING ? "secondary" :

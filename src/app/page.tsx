@@ -30,6 +30,8 @@ import { FcSupport } from "react-icons/fc";
 import ReactCountryFlag from "react-country-flag";
 import Footer from "./components/footer";
 import { FaCampground, FaCar, FaGamepad, FaGraduationCap, FaHeart, FaPalette, FaUtensils } from "react-icons/fa6";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { calculateFeesAndCommission } from "./components/fees";
 
 
 interface Event {
@@ -65,8 +67,8 @@ interface BookingDetails {
   ticketType: string;
   quantity: number;
   price: number;
-  fees: number;
-  vat: number;
+  commission: number;
+  paymentFees: number;
   total: number;
 }
 
@@ -74,6 +76,13 @@ export interface CustomJwtPayload extends JwtPayload {
   authorities: string[],
   exp: number
 }
+
+interface PaginationComponentProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
 
 const eventCategories = [
   { name: 'Night Party', icon: Music },
@@ -93,6 +102,74 @@ const eventCategories = [
   { name: 'Gaming', icon: FaGamepad }
 ];
 
+
+const PaginationComponent: React.FC<PaginationComponentProps> = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+}) => {
+  const maxVisiblePages = 5;
+  const pageNumbers = [];
+
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+
+  for (let i = startPage; i <= endPage; i++) {
+    pageNumbers.push(i);
+  }
+
+  return (
+    <Pagination className="mb-8">
+      <PaginationContent>
+        <PaginationItem>
+          <PaginationPrevious
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+          />
+        </PaginationItem>
+        {startPage > 1 && (
+          <>
+            <PaginationItem>
+              <PaginationLink onClick={() => onPageChange(1)}>1</PaginationLink>
+            </PaginationItem>
+            {startPage > 2 && <PaginationEllipsis />}
+          </>
+        )}
+        {pageNumbers.map((number) => (
+          <PaginationItem key={number}>
+            <PaginationLink className="text-black"
+              onClick={() => onPageChange(number)}
+              isActive={currentPage === number}
+            >
+              {number}
+            </PaginationLink>
+          </PaginationItem>
+        ))}
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <PaginationEllipsis />}
+            <PaginationItem>
+              <PaginationLink onClick={() => onPageChange(totalPages)}>
+                {totalPages}
+              </PaginationLink>
+            </PaginationItem>
+          </>
+        )}
+        <PaginationItem>
+          <PaginationNext
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+          />
+        </PaginationItem>
+      </PaginationContent>
+    </Pagination>
+  );
+};
+
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
@@ -109,6 +186,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [userRole, setUserRole] = useState<'basic' | 'publisher' | 'admin' | 'organizationOwner' | 'organizationMember' | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [eventsPerPage] = useState(12);
   const {toast} = useToast();
   const router = useRouter();
   const pathname = usePathname();
@@ -230,6 +309,13 @@ export default function Home() {
     router.push("/support");
   }
 
+  const checkIfOrganization = (): boolean => {
+    // For now it will always return false as we didn't implemented organization event creation
+    //TODO
+    // please leave this alone i will do it later
+    return false;
+  };
+
   const handleBookNow = () => {
 
     if (!validateToken()) {
@@ -241,17 +327,25 @@ export default function Home() {
       handleAuthRedirect(router, pathname);
       return;
     }
-  
     if (selectedEvent && selectedTicketType) {
+      const isOrganization = checkIfOrganization();
+      const { totalPaymentFees, commission, total } = calculateFeesAndCommission(
+        selectedTicketType.price, 
+        ticketQuantity, 
+        isOrganization,
+        selectedEvent.eventCurrency
+      );
+    
       const bookingDetails: BookingDetails = {
         eventId: selectedEvent.id,
         ticketType: selectedTicketType.name,
         quantity: ticketQuantity,
         price: selectedTicketType.price * ticketQuantity,
-        fees: 2 * ticketQuantity,
-        vat: selectedTicketType.price * ticketQuantity * 0.15,
-        total: calculateTotal()
+        paymentFees: totalPaymentFees, // this includes only Stripe fees
+        commission,
+        total,
       };
+    
       localStorage.setItem('currentBooking', JSON.stringify(bookingDetails));
       router.push(`user/event-details/${selectedEvent.id}`);
     } else {
@@ -294,15 +388,19 @@ export default function Home() {
     return event.ticketTypes.reduce((sum, t) => sum + t.remainingTickets, 0);
   };
   
-  const calculateSubtotal = () => {
-    return selectedTicketType ? selectedTicketType.price * ticketQuantity : 0;
-  };
   
   const calculateTotal = () => {
-    const subtotal = calculateSubtotal();
-    const fees = 2 * ticketQuantity; // Example fee calculation
-    const vat = subtotal * 0.15; // Example VAT calculation (15%)
-    return subtotal + fees + vat;
+    if (selectedEvent && selectedTicketType) {
+      const isOrganization = checkIfOrganization();
+      const { totalPaymentFees, commission, total } = calculateFeesAndCommission(
+        selectedTicketType.price,
+        ticketQuantity,
+        isOrganization,
+        selectedEvent.eventCurrency
+      );
+      return { subtotal: selectedTicketType.price * ticketQuantity, totalPaymentFees, commission, total };
+    }
+    return { subtotal: 0, totalPaymentFees: 0, commission: 0, total: 0 };
   };
 
   const sliderSettings = {
@@ -314,6 +412,15 @@ export default function Home() {
     autoplay: true,
     autoplaySpeed: 3000,
   };
+
+  // to calculate indexes for pagination
+  const indexOfLastEvent = currentPage * eventsPerPage;
+  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
+  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
+
+  // change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
 
    const handleLogOut = () => {
     setIsLoading(true);
@@ -434,8 +541,9 @@ export default function Home() {
         ) : error ? (
           <p className="text-center text-red-500">{error}</p>
         ) : (
+          <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
-            {filteredEvents.map((event, index) => (
+            {currentEvents.map((event, index) => (
               <Card key={event.id} className="bg-white bg-opacity-5 border-none overflow-hidden hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-300 cursor-pointer" onClick={() => handleEventClick(event)}>
                 <CardContent className="p-0">
                   {event.eventImages && event.eventImages.length > 0 && (
@@ -499,6 +607,12 @@ export default function Home() {
               </Card>
             ))}
           </div>
+          <PaginationComponent
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredEvents.length / eventsPerPage)}
+            onPageChange={paginate}
+          />
+           </>
         )}
       </div>
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -615,22 +729,29 @@ export default function Home() {
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-white">Order Summary</h3>
                 <div className="space-y-2 bg-gray-800 rounded-md p-4">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(calculateSubtotal(), selectedEvent?.eventCurrency || '')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Fees:</span>
-                    <span>{formatCurrency(2 * ticketQuantity, selectedEvent?.eventCurrency || '')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>VAT (15%):</span>
-                    <span>{formatCurrency(calculateSubtotal() * 0.15, selectedEvent?.eventCurrency || '')}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-700">
-                    <span>Total:</span>
-                    <span className="text-amber-400">{formatCurrency(calculateTotal(), selectedEvent?.eventCurrency || '')}</span>
-                  </div>
+                  {(() => {
+                    const { subtotal, totalPaymentFees, commission, total } = calculateTotal();
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Subtotal:</span>
+                          <span>{formatCurrency(subtotal, selectedEvent?.eventCurrency || '')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Payment fees:</span>
+                          <span>{formatCurrency(totalPaymentFees, selectedEvent?.eventCurrency || '')}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Commission:</span>
+                          <span>{formatCurrency(commission, selectedEvent?.eventCurrency || '')}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-700">
+                          <span>Total:</span>
+                          <span className="text-amber-400">{formatCurrency(total, selectedEvent?.eventCurrency || '')}</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
               <Button 
