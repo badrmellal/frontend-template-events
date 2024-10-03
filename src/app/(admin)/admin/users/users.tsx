@@ -61,6 +61,7 @@ import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
 import SidebarAdmin from "@/app/components/sidebar-admin";
 import Footer from "@/app/components/footer";
+import { africanCountries } from "@/app/api/currency/route";
 
 
 interface User {
@@ -71,6 +72,10 @@ interface User {
   profileImageUrl: string;
   joinDate: Date;
   lastLoginDate: Date;
+  enabled: boolean;
+  countryCode: string | null;
+  phoneNumber: string | null;
+
 }
 
 // TODO: filter users by roles
@@ -84,6 +89,7 @@ export default function UsersDashboard() {
   const [deleteUserId, setDeleteUserId] = useState<User["id"] | null>(null)
   const [newUser, setNewUser] = useState({ username: "", email: "", password:"", role: "" });
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
   const { toast } = useToast();
@@ -113,17 +119,21 @@ export default function UsersDashboard() {
 
   const filteredUsers = Array.isArray(users) 
   ? users.filter((user) =>
-      user.username.toLowerCase().includes(searchTerm.toLowerCase())
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (roleFilter === 'all' || user.role === roleFilter)
     )
   : [];
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter]);
 
-  // Get current users
+  //current users
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
-  // Change page
+  // to change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -177,42 +187,45 @@ export default function UsersDashboard() {
 
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(editUser);
+    const token = localStorage.getItem("token");
     if (editUser && editUser.id) {
-        try {
-            const response = await axios.put(`http://localhost:8080/user/update-role/${editUser.id}`, null, {
-                params: {
-                    assignedRole: editUser.role,  
-                }, 
-                headers: {
-                   Authorization: `Bearer ${localStorage.getItem("token")}`,
-               },
-            }
-            )
-            if(response.status === 200){
-                setUsers((prevUsers) => 
-                prevUsers.map((user) => user.id === editUser.id ? { ...editUser} : user));
-                setIsEditUserOpen(false);
-                toast({
-                  title: "Success",
-                  description: "User role edited successfully!"
-                })
-            }
-        } catch (error) {
-            console.error("Error updating user:", error);
-            toast({
-              title: "Error",
-              description: "Failed to update user role.",
-              variant: "destructive",
-            });
+      try {
+        const response = await axios.put(`http://localhost:8080/user/update-role/${editUser.id}`, null, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          params: {
+            assignedRole: editUser.role,
+            phoneNumber: editUser.phoneNumber,
+            countryCode: editUser.countryCode,
+            enabled: editUser.enabled
+          },
+        });
+
+        if (response.status === 200) {
+          setUsers((prevUsers) =>
+            prevUsers.map((user) => user.id === editUser.id ? { ...editUser } : user)
+          );
+          setIsEditUserOpen(false);
+          toast({
+            title: "Success",
+            description: "User updated successfully!"
+          });
         }
-    } else{
+      } catch (error) {
+        console.error("Error updating user:", error);
         toast({
-            title: "Error",
-              description: "Failed to recognize user.",
-              variant: "destructive",
-        })
-        return;
+          title: "Error",
+          description: "Failed to update user.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to recognize user.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -287,7 +300,7 @@ export default function UsersDashboard() {
         <h1 className="text-2xl font-bold text-gray-100">User Management</h1>
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-slate-800">
+            <Button className="hover:text-black hover:bg-white">
               <UserPlus className="mr-2 h-4 w-4" />
               Add User
             </Button>
@@ -348,9 +361,9 @@ export default function UsersDashboard() {
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="editor">Editor</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="ROLE_ADMIN">Admin</SelectItem>
+                      <SelectItem value="ROLE_PUBLISHER">Publisher</SelectItem>
+                      <SelectItem value="ROLE_BASIC_USER">Basic user</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -374,17 +387,18 @@ export default function UsersDashboard() {
           />
         </div>
      
-        <Select defaultValue="all">
-          <SelectTrigger className="w-full bg-white text-black sm:w-36">
-            <SelectValue placeholder="Filter by role" />
-          </SelectTrigger>
-          <SelectContent className="bg-white text-black">
-            <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="ROLE_ADMIN">Admin</SelectItem>
-            <SelectItem value="ROLE_PUBLISHER">Publisher</SelectItem>
-            <SelectItem value="ROLE_BASIC_USER">Basic User</SelectItem>
-          </SelectContent>
-        </Select>
+         <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-[180px] bg-white">
+                <SelectValue placeholder="Filter by role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="ROLE_ADMIN">Admin</SelectItem>
+                <SelectItem value="ROLE_PUBLISHER">Publisher</SelectItem>
+                <SelectItem value="ROLE_ORGANIZATION_OWNER">Organization Owner</SelectItem>
+                <SelectItem value="ROLE_BASIC_USER">Basic User</SelectItem>
+              </SelectContent>
+            </Select>
         
       </div>
       <div className="hidden md:block">
@@ -395,6 +409,7 @@ export default function UsersDashboard() {
                 <TableHead className="w-[250px]">Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead className="text-center">Join Date</TableHead>
                 <TableHead className="text-right">Last Active</TableHead>
                 <TableHead className="w-[70px]"></TableHead>
@@ -435,17 +450,17 @@ export default function UsersDashboard() {
                       {user.role}
                     </Badge>
                   </TableCell>
+                 
                   <TableCell>
                     <div className="flex items-center">
-                      <div
-                        className={`h-2 w-2 rounded-full mr-2 ${
-                          user.lastLoginDate
-                            ? "bg-green-500"
-                            : "bg-gray-300"
-                        }`}
-                      />
-                      {user.lastLoginDate ? "Active" : "Offline"}
+                      <div className={`h-2 w-2 rounded-full mr-2 ${user.enabled ? 'bg-green-500' : 'bg-red-500'}`} />
+                      {user.enabled ? 'Active' : 'Inactive'}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {user.phoneNumber && user.countryCode
+                      ? `${user.countryCode} ${user.phoneNumber}`
+                      : 'Not provided'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
@@ -501,6 +516,10 @@ export default function UsersDashboard() {
           </Table>
         </div>
       </div>
+
+
+
+      {/* Mobile view */}
       <div className="md:hidden space-y-4">
         {filteredUsers.map((user) => (
           <Card key={user.id}>
@@ -534,7 +553,7 @@ export default function UsersDashboard() {
                       : "secondary"
                   }
                 >
-                  {user.role}
+                  {user.role.replace('ROLE_', '')}
                 </Badge>
               </div>
               <div className="flex justify-between">
@@ -542,15 +561,23 @@ export default function UsersDashboard() {
                 <div className="flex items-center">
                   <div
                     className={`h-2 w-2 rounded-full mr-2 ${
-                      user.lastLoginDate ? "bg-green-500" : "bg-gray-300"
+                      user.enabled ? "bg-green-500" : "bg-red-500"
                     }`}
                   />
-                  {user.lastLoginDate ? "Active" : "Offline"}
+                  {user.enabled ? "Active" : "Inactive"}
                 </div>
               </div>
               <div className="flex justify-between">
+                <span className="font-semibold">Country:</span>
+                <span>{africanCountries.find(c => c.code === user.countryCode)?.name || 'Not provided'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Phone:</span>
+                <span>{user.phoneNumber || 'Not provided'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="font-semibold">Join Date:</span>
-                <span>{new Date(user.joinDate).toLocaleString()}</span>
+                <span>{new Date(user.joinDate).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold">Last Active:</span>
@@ -566,7 +593,8 @@ export default function UsersDashboard() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-full">
-                  <DropdownMenuItem className="cursor-pointer"
+                  <DropdownMenuItem 
+                    className="cursor-pointer"
                     onClick={() => {
                       setEditUser(user);
                       setIsEditUserOpen(true);
@@ -576,11 +604,12 @@ export default function UsersDashboard() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem  
-                  onClick={()=> {
-                    setDeleteUserId(user.id);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                  className="text-red-600 cursor-pointer">
+                    onClick={() => {
+                      setDeleteUserId(user.id);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    className="text-red-600 cursor-pointer"
+                  >
                     Delete user
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -589,9 +618,11 @@ export default function UsersDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-        Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
+          Showing {indexOfFirstUser + 1}-{Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} users
         </p>
         <div className="flex items-center space-x-2">
           <Button 
@@ -622,6 +653,8 @@ export default function UsersDashboard() {
           </Button>
         </div>
       </div>
+
+
 
       {/* Edit User Modal */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
@@ -665,6 +698,39 @@ export default function UsersDashboard() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-country-code" className="text-right">
+                  Country
+                </Label>
+                <Select
+                  value={editUser.countryCode || ''}
+                  onValueChange={(value) => setEditUser({ ...editUser, countryCode: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {africanCountries.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name} ({country.dial_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-phone" className="text-right">
+                      Phone
+                    </Label>
+                    <Input
+                      id="edit-phone"
+                      value={editUser.phoneNumber || ''}
+                      onChange={(e) => setEditUser({ ...editUser, phoneNumber: e.target.value })}
+                      className="col-span-3"
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                 
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="role" className="text-right">
                     Role
                   </Label>
@@ -684,6 +750,23 @@ export default function UsersDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-status" className="text-right">
+                      Status
+                    </Label>
+                    <Select
+                      value={editUser.enabled ? 'active' : 'inactive'}
+                      onValueChange={(value) => setEditUser({ ...editUser, enabled: value === 'active' })}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
               </div>
               <DialogFooter>
                 <Button type="submit">Save changes</Button>

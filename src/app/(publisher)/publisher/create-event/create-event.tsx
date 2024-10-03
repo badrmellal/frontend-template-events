@@ -65,8 +65,15 @@ const eventCategories = [
     'Government',
     'Concert',
     'Conference',
-    'Startups & Business'
-];
+    'Startups & Business',
+    'Food & Drink',
+    'Art & Culture',
+    'Education',
+    'Outdoor & Adventure',
+    'Automotive',
+    'Charity & Causes',
+    'Gaming'
+]; 
 
 
 const CreateEvent: React.FC = () => {

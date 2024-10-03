@@ -26,6 +26,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { FaFacebook, FaInstagram, FaTiktok, FaTwitter } from 'react-icons/fa6';
 import Footer from '@/app/components/footer';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Event {
   id: number;
@@ -69,7 +70,10 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasStoredBooking, setHasStoredBooking] = useState(false);
+  const [totalPrice, setTotalPrice] = useState<number | null>(null);
   const router = useRouter();
+  const {toast} = useToast();
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -91,7 +95,12 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
           const selectedTicket = response.data.ticketTypes.find(
             ticket => ticket.name === bookingDetails.ticketType
           );
+          setHasStoredBooking(true);
           setSelectedTicketType(selectedTicket || null);
+          setTotalPrice(bookingDetails.total || null);
+        } else {
+          setHasStoredBooking(false);
+          setTotalPrice(null);
         }
 
         setLoading(false);
@@ -115,7 +124,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
     
     if (!token) {
       router.push("/sign-up");
-    } else if (event && storedBooking) {
+    } else if (event && storedBooking) { 
       const bookingDetails = JSON.parse(storedBooking);
       if (bookingDetails.eventId === event.id) {
         router.push(`/user/payment-confirmation/${event.id}`);
@@ -123,7 +132,11 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
         router.push('/');
       }
     } else {
-      router.push('/');
+      toast({
+        title: "Error",
+        description: "No ticket selected! Please select one.",
+        variant: "destructive"
+      })
     }
   };
 
@@ -151,7 +164,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-black">
-        <div className="animate-pulse rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
       </div>
     );
   }
@@ -212,7 +225,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
             </Slider>
           ) : (
             <Image
-              src={event.eventImages[0] || "/placeholder.svg?height=400&width=1200"}
+              src={event.eventImages[0] || "/myticket-logo.png"}
               alt="Event cover"
               className="relative inset-0 h-full w-full object-cover"
               width={1200}
@@ -280,7 +293,9 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
                     <div className="flex justify-between">
                       <span className="font-medium text-white">{selectedTicketType.name}</span>
                       <span className="text-gray-300">
-                        {selectedTicketType.price === 0 ? 'Free' : formatCurrency(selectedTicketType.price, event.countryCode)}
+                        {totalPrice === null
+                          ? (selectedTicketType.price === 0 ? 'Free' : formatCurrency(selectedTicketType.price, event.eventCurrency))
+                          : (totalPrice === 0 ? 'Free' : formatCurrency(totalPrice, event.eventCurrency))}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -292,9 +307,13 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
               ) : (
                 <p className="text-gray-300">No ticket selected</p>
               )}
-              <Button className="w-full bg-amber-500 text-black hover:bg-amber-600" onClick={handleBuyTickets}>
+              <Button disabled={!hasStoredBooking}
+              className="w-full bg-amber-500 text-black hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-800"  
+              onClick={handleBuyTickets}>
                 <Ticket className="mr-2 h-4 w-4" />
-                {event.isFreeEvent ? 'Get My Ticket' : 'Continue Booking'}
+                {hasStoredBooking?
+                (event.isFreeEvent ? 'Get My Ticket' : 'Continue Booking')
+                : 'Select ticket'}
               </Button>
             </CardContent>
           </Card>

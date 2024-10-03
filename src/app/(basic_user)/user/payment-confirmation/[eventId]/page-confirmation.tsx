@@ -16,6 +16,8 @@ import  QRCode  from 'qrcode';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FaApplePay, FaCcAmex, FaCcMastercard, FaCcVisa, FaGooglePay, FaPaypal } from 'react-icons/fa6';
 import Footer from '@/app/components/footer';
+import { useToast } from '@/components/ui/use-toast';
+import ErrorPaymentComfirmationPage from '@/app/components/error-payment-page';
 
 
 interface Event {
@@ -39,27 +41,30 @@ interface Event {
     ticketType: string;
     quantity: number;
     price: number;
-    fees: number;
-    vat: number;
+    paymentFees: number;
+    commission: number;
     total: number;
   }
+
   
   export default function PaymentConfirmation() {
     const [event, setEvent] = useState<Event | null>(null);
     const [booking, setBooking] = useState<BookingDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [paymentMethod, setPaymentMethod] = useState('card');
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [resaleAgreed, setResaleAgreed] = useState(false);
     const [promoCode, setPromoCode] = useState('');
     const [timeLeft, setTimeLeft] = useState(300) // 5 minutes in seconds
     const [isExpired, setIsExpired] = useState(false)
+    const [isValidTotal, setIsValidTotal] = useState(true);
+    const [showErrorPage, setShowErrorPage] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const router = useRouter();
     const params = useParams();
     const eventId = params.eventId as string;
-    const [qrValue, setQRValue] = useState();
       const [qrCodeUrl, setQRCodeUrl] = useState('');
+      const {toast} = useToast();
 
     useEffect(() => {
       const fetchEventAndBookingDetails = async () => {
@@ -71,15 +76,44 @@ interface Event {
   
           const storedBooking = localStorage.getItem('currentBooking');
           if (storedBooking) {
-            setBooking(JSON.parse(storedBooking));
-          } else {
-            setError('No booking details found. Please start the booking process again.');
+            const bookingDetails = JSON.parse(storedBooking);
+            setBooking(bookingDetails);
+             // Verify the total price
+          const feesResponse = await axios.post('/api/verify-fees', {
+            price: bookingDetails.price / bookingDetails.quantity, 
+            quantity: bookingDetails.quantity,
+            isOrganization: false, // We need to get this information from another function later
+            currencyCode: eventResponse.data.eventCurrency,
+            storedTotal: bookingDetails.total 
+          });
+
+          setIsValidTotal(feesResponse.data.isValid);
+          if (!feesResponse.data.isValid) {
+            toast({
+              title: "Price Discrepancy",
+              description: "There seems to be a discrepancy in the price. Please try booking again.",
+              variant: "destructive"
+            });
           }
+        } else {
+          setErrorMessage('No booking details found. Please start the booking process again.');
+          toast({
+            title: "Booking Not Found",
+            description: "No booking details found. Please start the booking process again.",
+            variant: "destructive"
+          });
+        }
   
           setLoading(false);
         } catch (error) {
           console.error('Failed to fetch event or booking details:', error);
-          setError('Failed to load event or booking details. Please try again.');
+          setErrorMessage('Failed to load event or booking details. Please try again.');
+          setShowErrorPage(true);
+          toast({
+            title: "Error",
+            description: "Failed to load event or booking details. Please try again.",
+            variant: "destructive"
+          });
           setLoading(false);
         }
       };
@@ -96,11 +130,10 @@ interface Event {
         return prevTime - 1
       })
     }, 1000)
-    // to clean up 
     return () => {
       clearInterval(timer)
     }
-  }, [eventId]);
+  }, [eventId, toast]);
 
   useEffect(() => {
     if (isExpired) {
@@ -119,15 +152,29 @@ interface Event {
   }
   
     const handlePayment = async () => {
-  
+      if (!isValidTotal) {
+        toast({
+          title: "Invalid Total",
+          description: "Invalid total price. Please start the booking process again.",
+          variant: "destructive"
+        });
+        localStorage.removeItem("currentBooking");
+        setTimeout(()=> setShowErrorPage(true), 1500);
+        return;
+      }
   
       if (!termsAccepted || !resaleAgreed) {
-        setError('Please accept the terms and conditions to proceed.');
+        toast({
+          title: "Terms Not Accepted",
+          description: "Please accept the terms and conditions to proceed.",
+          variant: "destructive"
+        });
         return;
       }
   
       if (!event || !booking) {
-        setError('Event or booking details are missing.');
+        setShowErrorPage(true);
+        setErrorMessage('Event or booking details are missing.');
         return;
       }
       try {
@@ -149,6 +196,10 @@ interface Event {
               }
           }
         );
+        toast({
+          title: "Payment Successful",
+          description: "Your ticket has been purchased successfully!",
+        });
         try {
             const jsonString = JSON.stringify(response.data);
             const url = await QRCode.toDataURL(jsonString, {
@@ -156,10 +207,14 @@ interface Event {
               margin: 2,
             });
             setQRCodeUrl(url);
-            setError('');
+            setErrorMessage('');
           } catch (err) {
             console.error('Error generating QR code:', err);
-            setError('Invalid JSON input');
+            toast({
+              title: "QR Code Error",
+              description: "Failed to generate QR code for your ticket.",
+              variant: "destructive"
+            });
             setQRCodeUrl('');
           }
   
@@ -185,31 +240,37 @@ interface Event {
         // }
       } catch (error) {
         console.error('Failed to process payment or create ticket:', error);
-        setError('Failed to process payment or create ticket. Please try again.');
+        toast({
+          title: "Payment Failed",
+          description: "Failed to process payment or create ticket. Please try again.",
+          variant: "destructive"
+        });
       }
     };
   
     if (loading) {
       return (
-        <div className="flex justify-center items-center h-screen bg-gray-900">
-          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-pink-500"></div>
+        <div className="flex justify-center items-center h-screen bg-gray-950">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
         </div>
       );
     }
-  
-    if (error || !event || !booking) {
-      return (
-        <div className="flex justify-center items-center h-screen bg-gray-900 text-white">
-          <p>{error || "Event or booking details not found"}</p>
-        </div>
-      );
-    }
-  
-    return (
 
+    if (showErrorPage) {
+      return <ErrorPaymentComfirmationPage message={errorMessage} />;
+    }
+  
+  
+    if (!event || !booking) {
+      return <ErrorPaymentComfirmationPage message="Event or booking details not found" />;
+    }
+  
+
+
+    return (
       <div className="min-h-screen bg-black text-white p-8">
       <Dialog open={isExpired} onOpenChange={setIsExpired}>
-        <DialogContent >
+        <DialogContent className="max-w-[90vw] sm:max-w-md rounded-md" >
           <DialogHeader>
             <DialogTitle>Session Expired</DialogTitle>
           </DialogHeader>
@@ -222,7 +283,7 @@ interface Event {
         </DialogContent>
       </Dialog>
   
-        <div className="max-w-6xl mx-auto mb-5">
+        <div className="max-w-6xl mx-auto mb-10">
           <Button
             onClick={() => router.back()}
             className="mb-8 bg-transparent hover:bg-white hover:text-black hover:border-white text-white border-white"
@@ -304,7 +365,7 @@ interface Event {
                         className="border-amber-500 text-amber-500"
                       />
                       <Label htmlFor="resale" className="text-sm font-light text-white">
-                        I agree that any re-sale of a ticket on a platform other than africashowtime.com is deemed to be illegal and will therefore result in the account being banned, the ticket will get cancelled, and will not accept any request for ticket or value refund.
+                        I agree that any re-sale of a ticket on a platform other than myticket.africa is deemed to be illegal and will therefore result in the account being banned, the ticket will get cancelled, and will not accept any request for ticket or value refund.
                       </Label>
                     </div>
                   </div>
@@ -333,20 +394,16 @@ interface Event {
                     <div className="flex text-gray-100 justify-between">
                       <span>{booking.quantity} x {booking.ticketType}</span>
                       <span>{formatCurrency(booking.price, event.eventCurrency)}</span>
-                    </div>
+                    </div> 
                     {!event.isFreeEvent && (
                       <>
                         <div className="flex justify-between text-gray-400">
-                          <span>Subtotal</span>
-                          <span>{formatCurrency(booking.price, event.eventCurrency)}</span>
+                          <span>Payment fees</span>
+                          <span>{formatCurrency(booking.paymentFees, event.eventCurrency)}</span>
                         </div>
                         <div className="flex justify-between text-gray-400">
-                          <span>Fees</span>
-                          <span>{formatCurrency(booking.fees, event.eventCurrency)}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-400">
-                          <span>VAT</span>
-                          <span>{formatCurrency(booking.vat, event.eventCurrency)}</span>
+                          <span>Commission</span>
+                          <span>{formatCurrency(booking.commission, event.eventCurrency)}</span>
                         </div>
                       </>
                     )}
