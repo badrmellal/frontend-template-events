@@ -38,6 +38,7 @@ import {
 import {africanCountries} from "@/app/api/currency/route";
 import Footer from "@/app/components/footer";
 import {useToast} from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 
 
@@ -136,6 +137,7 @@ const Settings: React.FC = () => {
     }
   }, [selectedCountry])
   const { toast } = useToast()
+  const route = useRouter()
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -147,7 +149,6 @@ const Settings: React.FC = () => {
         }
       })
         setUser(response.data)
-      console.log(response.data)
     }
     }
     fetchedUser();
@@ -171,7 +172,7 @@ const Settings: React.FC = () => {
 
   const handleLogOut = () => {
     localStorage.removeItem("token");
-    window.location.reload();
+    route.push('/login')
   }
     const handleInputChange = (e: { target: { name: any; value: any; }; })=>{
         setInput({
@@ -200,22 +201,30 @@ const Settings: React.FC = () => {
             description: "Your account infos are updated.",
           })
         } catch (error) {
-            console.log(error)
-            setPhoneError(`Invalid ${selectedCountry.name} phone number `);
+          setIsLoading(false)
+          console.log(error)
         }
 
       }
 
-  const storePhoneNumber = (rawNumber: string, country: string) => {
+   const storePhoneNumber = (rawNumber: string, country: string) => {
+    // check if the raw number contains a country code
+     const hasCountryCode = rawNumber.startsWith('+');
+     if(hasCountryCode) {
+       setPhoneError('Please dont include the country code')
+       throw new Error('Please dont include the country code')
+     }
+     setPhoneError(null) ;
     // @ts-ignore
     const phoneNumber = parsePhoneNumberFromString(rawNumber, country);
 
     if (phoneNumber && phoneNumber.isValid()) {
-      const formattedNumber = phoneNumber.format('E.164'); 
+      const formattedNumber = phoneNumber.format('E.164');
       const countryCode = phoneNumber.country;
       setPhoneError(null)
       return { formattedNumber, countryCode };
     } else {
+      setPhoneError(`Invalid ${selectedCountry.name} phone number `);
       throw new Error('Invalid phone number');
     }
   };

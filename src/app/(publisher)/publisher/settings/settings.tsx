@@ -13,24 +13,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronDownIcon, CreditCard, Facebook, Globe, Headset, Instagram, LogOut, PlusCircle, Trash2, Twitter } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
 import {africanCountries} from "@/app/api/currency/route";
 import Footer from "@/app/components/footer";
+import axios from "axios";
+import { SocialLink, User } from "@/types/user";
+import parsePhoneNumberFromString from "libphonenumber-js";
+import {
+  Dialog, DialogClose,
+  DialogContent,
+  DialogDescription, DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import {useToast} from "@/components/ui/use-toast";
 
 
 
 
-  const socialPlatforms = [
-    { value: 'facebook', label: 'Facebook', icon: Facebook },
-    { value: 'instagram', label: 'Instagram', icon: Instagram },
-    { value: 'website', label: 'Website', icon: Globe },
-  ];
+const socialPlatforms = [
+  { value: 'facebook', label: 'Facebook', icon: Facebook },
+  { value: 'instagram', label: 'Instagram', icon: Instagram },
+  { value: 'website', label: 'Website', icon: Globe },
+];
 
-  interface SocialLink{
-    url: string,
-    platform: string
-  }
+const MAX_BIO_LENGTH = 255;
+
+
 
 const SettingPublisher: React.FC = () => {
     const [payoutFrequency, setPayoutFrequency] = useState('monthly');
@@ -40,13 +51,15 @@ const SettingPublisher: React.FC = () => {
     const [phoneNumber, setPhoneNumber] = useState('')
     const [savedPayoutMethod, setSavedPayoutMethod] = useState({ type: 'bank_transfer', details: '**** 1234' });
     const inputRef = useRef<HTMLInputElement>(null)
-
+    const [publisher, setPublisher] = useState<User | null>();
+    const [phoneError, setPhoneError] = useState<string | null>(null);
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([{ platform: '', url: '' }]);
     const addSocialLink = () => {
         setSocialLinks([...socialLinks, { platform: '', url: '' }]);
       };
-    
-      const removeSocialLink = (index: number) => {
+  const [isLoading, setIsLoading] = useState(false)
+  const {toast} = useToast();
+  const removeSocialLink = (index: number) => {
         const newLinks = socialLinks.filter((_, i) => i !== index);
         setSocialLinks(newLinks);
       };
@@ -56,7 +69,15 @@ const SettingPublisher: React.FC = () => {
         newLinks[index][field] = value;
         setSocialLinks(newLinks);
       };
-    
+    const [input, setInput] = useState<{
+      phoneNumber: string;
+      bio: string;
+        socialLinks: SocialLink[];
+    }>({
+        phoneNumber: '',
+        bio: '',
+        socialLinks: [{ platform: '', url: '' }]
+        });
 
     useEffect(() => {
         if (inputRef.current) {
@@ -83,11 +104,81 @@ const SettingPublisher: React.FC = () => {
         }
       }
     
+      useEffect(()=>{
+        const fetchPublisher = async ()=>{
+          const fetchedPublisher = await axios.get<User>('http://localhost:8080/user/publisher-info',{
+            headers :{
+              Authorization : `Bearer ${localStorage.getItem('token')}`
+            }
+          })
+          setPublisher(fetchedPublisher.data)
+          // if social links are not empty
+            if(fetchedPublisher.data.socialLinks.length > 0){
+                setSocialLinks(fetchedPublisher.data.socialLinks)
+            }
+        }
+        fetchPublisher();
+      }
+      ,[])
+      
       const handleLogOut = () => {
         localStorage.removeItem("token");
         window.location.reload();
       }
+  const storePhoneNumber = (rawNumber: string, country: string) => {
+    // check if the raw number contains a country code
+    const hasCountryCode = rawNumber.startsWith('+');
+    if(hasCountryCode) {
+      setPhoneError('Please dont include the country code')
+      throw new Error('Please dont include the country code')
+    }
+    setPhoneError(null) ;
+    // @ts-ignore
+    const phoneNumber = parsePhoneNumberFromString(rawNumber, country);
 
+    if (phoneNumber && phoneNumber.isValid()) {
+      const formattedNumber = phoneNumber.format('E.164');
+      const countryCode = phoneNumber.country;
+      setPhoneError(null)
+      return { formattedNumber, countryCode };
+    } else {
+      setPhoneError(`Invalid ${selectedCountry.name} phone number `);
+      throw new Error('Invalid phone number');
+    }
+  };
+
+    const handleInputChange = (e: { target: { name: any; value: any; }; })=>{
+      setInput({
+        ...input,
+        [e.target.name]: e.target.value
+      })
+    }
+      const handleSave = async ()=>{
+        try{
+          setIsLoading(true)
+          const { formattedNumber, countryCode } = storePhoneNumber(input.phoneNumber, selectedCountry.code);
+            const updatedPublisher = {
+                ...publisher,
+                phoneNumber: formattedNumber,
+                countryCode: countryCode,
+                bio: input.bio,
+                socialLinks: socialLinks
+            }
+              await axios.post('http://localhost:8080/user/update-publisher', updatedPublisher,{
+                headers :{
+                  Authorization : `Bearer ${localStorage.getItem('token')}`
+                }
+            }).then(()=>{
+                setIsLoading(false);
+                toast({
+                    description: "Profile updated successfully",
+                })
+            })
+        }catch(e){
+          setIsLoading(false)
+          console.log(e)
+        }
+      }
     return (
         <div className="min-h-screen bg-black">
         <SidebarPublisher />
@@ -154,11 +245,11 @@ const SettingPublisher: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="username">Username</Label>
-                    <Input disabled id="username" defaultValue="Badr Mellal" />
+                    <Input disabled id="username" value={publisher?.username} />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" defaultValue="badr@example.com" disabled />
+                    <Input id="email" type="email" defaultValue={publisher?.email} disabled />
                   </div>
                   <div className="flex w-full max-w-sm items-center space-x-2">
                     <Popover>
@@ -193,16 +284,24 @@ const SettingPublisher: React.FC = () => {
                       ref={inputRef}
                       type="tel"
                       placeholder="Phone number"
-                      value={phoneNumber}
-                      onChange={handlePhoneChange}
+                      value={input.phoneNumber}
+                      onChange={handleInputChange}
                       className="flex-grow"
+                      name="phoneNumber"
                     />
                   </div>
+                    {
+                        phoneError && <p className="text-red-600 text-sm">{phoneError}</p>
+                    }
                   <div className="space-y-1">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea
                     id="bio"
-                    placeholder="Tell your customers about yourself or your organisation and your events..."
+                    placeholder="Tell your customers about yourself or your organisation and your events... (max 255 characters)"
+                    maxLength={MAX_BIO_LENGTH}
+                    onChange={handleInputChange}
+                    defaultValue={publisher?.bio}
+                    name={"bio"}
                   />
                 </div>
                 <div className="space-y-4">
@@ -253,8 +352,33 @@ const SettingPublisher: React.FC = () => {
                     </div>
                 </CardContent>
                 <CardFooter>
-                  <Button>Save changes</Button>
-                </CardFooter>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" disabled={isLoading || input.phoneNumber.length===0}>
+                        {isLoading ? "Saving..." : "Save changes"}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Save changes</DialogTitle>
+                        <DialogDescription>
+                          Are you sure you want to save these changes?
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter className="sm:justify-start">
+                        <DialogClose asChild>
+                          <Button type="submit" size="sm" className="px-3" variant="default" onClick={handleSave}>
+                            Save
+                          </Button>
+                        </DialogClose>
+                        <DialogClose asChild>
+                          <Button type="button" variant="secondary">
+                            Cancel
+                          </Button>
+                        </DialogClose>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>                </CardFooter>
               </Card>
             </TabsContent>
             <TabsContent value="payout settings">

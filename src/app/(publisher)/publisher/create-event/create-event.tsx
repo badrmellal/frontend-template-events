@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { format, set } from "date-fns";
-import { Calendar as CalendarIcon, Headset, LogOut, Plus, Tag, Ticket, Upload, X } from "lucide-react"; 
+import { Calendar as CalendarIcon, Headset, Info, LogOut, Plus, Tag, Ticket, Upload, X } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,6 +28,7 @@ import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
 import { motion } from 'framer-motion';
 import Footer from '@/app/components/footer';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 interface EventFormInputs {
@@ -223,7 +224,7 @@ const CreateEvent: React.FC = () => {
 
     const validateInputs = () => {
         let newErrors: { [key: string]: string } = {};
-        const googleMapsUrlPattern = /^https:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/.*$/;
+        const googleMapsUrlPattern = /^https:\/\/maps\.app\.goo\.gl\/[a-zA-Z0-9]+$/;
 
         if (!formData.eventName.trim()) newErrors.eventName = "Event name is required.";
         if (!formData.eventCategory) newErrors.eventCategory = "Event category is required.";
@@ -239,7 +240,7 @@ const CreateEvent: React.FC = () => {
         if (!formData.googleMapsUrl.trim()) {
             newErrors.googleMapsUrl = "Google Maps URL is required.";
         } else if (!googleMapsUrlPattern.test(formData.googleMapsUrl)) {
-            newErrors.googleMapsUrl = "Please enter a valid Google Maps URL.";
+            newErrors.googleMapsUrl = "Please enter a valid Google Maps URL. ex : https://maps.app.goo.gl/Qghn35Ykhnx12 ";
         }
         if (formData.ticketTypes.length === 0) {
             newErrors.ticketTypes = "At least one ticket type is required.";
@@ -416,7 +417,7 @@ const CreateEvent: React.FC = () => {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label htmlFor="eventName" className="text-sm font-medium text-gray-700">Event Name</Label>
+                                    <Label htmlFor="eventName" className="text-sm font-medium text-gray-700">Event Name <span className='text-red-800'>*</span></Label>
                                         <Input
                                             id="eventName"
                                             name="eventName"
@@ -428,7 +429,7 @@ const CreateEvent: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label htmlFor="eventCategory" className="text-sm font-medium text-gray-700">Event Category</Label>
+                                        <Label htmlFor="eventCategory" className="text-sm font-medium text-gray-700">Event Category <span className='text-red-800'>*</span></Label>
                                         <Select value={formData.eventCategory} onValueChange={handleCategoryChange}>
                                             <SelectTrigger id="eventCategory" className="w-full">
                                                 <SelectValue placeholder="Select a category" />
@@ -449,7 +450,7 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="eventDescription" className="text-sm font-medium text-gray-700">Event Description</Label>
+                                    <Label htmlFor="eventDescription" className="text-sm font-medium text-gray-700">Event Description <span className='text-red-800'>*</span></Label>
                                     <Textarea
                                         id="eventDescription"
                                         name="eventDescription"
@@ -462,7 +463,7 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700">Event Images</Label>
+                                    <Label className="text-sm font-medium text-gray-700">Event Images <span className='text-red-800'>*</span></Label>
                                     <div className="grid sm:grid-cols-3 grid-cols-2 gap-4">
                                         {previewImages.map((preview, index) => (
                                             <div key={index} className="relative">
@@ -514,7 +515,7 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="eventCountry" className="text-sm font-medium text-gray-700">Select Event Country</Label>
+                                    <Label htmlFor="eventCountry" className="text-sm font-medium text-gray-700">Select Event Country <span className='text-red-800'>*</span></Label>
                                     <Select value={formData.eventCountry} onValueChange={handleCountryChange}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select a country">
@@ -558,7 +559,7 @@ const CreateEvent: React.FC = () => {
 
 
                                 <div className="space-y-2">
-                                    <Label className="text-sm font-medium text-gray-700">Event Date and Time</Label>
+                                    <Label className="text-sm font-medium text-gray-700">Event Date and Time <span className='text-red-800'>*</span></Label>
                                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                         <Popover>
                                             <PopoverTrigger asChild>
@@ -591,7 +592,7 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="addressLocation" className="text-sm font-medium text-gray-700">Address Location</Label>
+                                    <Label htmlFor="addressLocation" className="text-sm font-medium text-gray-700">Address Location <span className='text-red-800'>*</span></Label>
                                     <Input
                                         id="addressLocation"
                                         name="addressLocation"
@@ -603,7 +604,24 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700">Google Maps URL</Label>
+                                    <Label htmlFor="googleMapsUrl" className="text-sm font-medium text-gray-700">Google Maps URL <span className='text-red-800'>*</span>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                <Info className="h-5 w-5 ml-2 text-gray-900 inline" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p className="font-bold mb-2">How to copy the correct URL:</p>
+                                                    <ol className="list-decimal list-inside space-y-1 text-sm">
+                                                    <li>Open Google Maps and find your location</li>
+                                                    <li>Click the "Share" button</li>
+                                                    <li>Copy the shortened URL (starts with https://maps.app.goo.gl/)</li>
+                                                    </ol>
+                                                    <p className="mt-2 text-xs">Example: https://maps.app.goo.gl/AbCdEfGh</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </Label>
                                     <Input
                                         id="googleMapsUrl"
                                         name="googleMapsUrl"
@@ -630,7 +648,7 @@ const CreateEvent: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <Label className="text-lg font-medium text-gray-700">Ticket Types</Label>
+                                    <Label className="text-lg font-medium text-gray-700">Ticket Types <span className='text-red-800'>*</span></Label>
                                     {formData.ticketTypes.map((ticketType, index) => (
                                         <div key={index} className="space-y-2 p-4 border rounded-md">
                                             <div className="flex justify-between items-center">
