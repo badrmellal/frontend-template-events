@@ -131,6 +131,7 @@ const Settings: React.FC = () => {
   const [user, setUser] = useState<User>()
   const [token, setToken] = useState<string | null>("")
   const [phoneError, setPhoneError] = useState<string | null>(null)
+  const router = useRouter();
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus()

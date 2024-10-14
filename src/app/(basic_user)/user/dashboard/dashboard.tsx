@@ -206,7 +206,7 @@ export default function UserDashboard() {
           upcomingEvents: 0,
           loyaltyPoints: userInfo.loyaltyPoints || 0
         },
-        recommendedEvents: recommendedEventsResponse.data.slice(0, 3),
+        recommendedEvents: recommendedEventsResponse.data.slice(0, 6),
         loyaltyProgram: loyaltyProgramResponse.data,
         inviteCode: inviteCodeResponse.data,
         loading: false
@@ -422,7 +422,7 @@ export default function UserDashboard() {
     variants={pageVariants}
     transition={pageTransition}
   >
-      <div className="flex-1 pl-0 sm:pl-12 pt-10">
+      <div className="flex-1 pl-0 sm:pl-14 pt-10">
         <div className="p-5">
         <motion.div 
             className="flex justify-between items-center mb-8"
@@ -451,11 +451,11 @@ export default function UserDashboard() {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Headset className="h-4 w-4 mr-2" />
+                  <Headset className="h-4 w-4 text-gray-500 mr-2" />
                   Support
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
+                  <LogOut className="h-4 w-4 text-gray-500 mr-2" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>

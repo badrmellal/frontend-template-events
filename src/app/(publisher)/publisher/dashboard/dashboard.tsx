@@ -350,7 +350,9 @@ const DashboardPublisher = ()=> {
         </div>
       </main>
       </div>
-      <Footer />
+      <div className="sm:pl-14 pl-0">
+       <Footer />
+      </div>
     </div>
     )
 }

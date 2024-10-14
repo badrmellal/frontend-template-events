@@ -12,8 +12,12 @@ import { Separator } from "@/components/ui/separator"
 export default function SidebarUser() {
   const pathname = usePathname()
 
-  const isActive = (href: string): boolean => pathname === href
-
+  const isActive = (href: string): boolean => {
+    if (href === '/user/upcoming-events') {
+      return pathname === href || pathname === '/user/my-upcoming-events'
+    }
+    return pathname === href
+  }
   const linkClass = (href: string): string => `flex items-center gap-4 ${
     isActive(href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
   }`
@@ -21,6 +25,7 @@ export default function SidebarUser() {
   const iconClass = (href: string): string => `flex h-9 w-9 items-center justify-center rounded-lg ${
     isActive(href) ? 'bg-gray-300' : ''
   } text-black transition-colors hover:text-gray-600 md:h-8 md:w-8`
+
 
   return (
     <TooltipProvider>
@@ -44,7 +49,7 @@ export default function SidebarUser() {
               <Home className="h-5 w-5" />
               Dashboard
             </Link>
-            <Link href="/user/my-events" className={linkClass('/user/upcoming-events')}>
+            <Link href="/user/upcoming-events" className={linkClass('/user/upcoming-events')}>
               <PartyPopper className="h-5 w-5" />
               Upcoming events
             </Link>

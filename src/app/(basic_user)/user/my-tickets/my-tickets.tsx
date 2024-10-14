@@ -1,146 +1,341 @@
-'use client'
+
 import React, { useEffect, useState } from 'react'
-import axios from "axios";
+import axios from "axios"
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import {Button} from "@/components/ui/button";
-import {Alert} from "@/components/ui/alert";
+import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   DropdownMenu,
-  DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import Image from "next/image";
-import {Headset, LogOut} from "lucide-react";
-import SidebarUser from "@/app/components/sidebar-user";
-import {Badge} from "@/components/ui/badge";
-import { useRouter } from 'next/navigation';
+} from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import Image from "next/image"
+import { Headset, LogOut, Filter, Download, Printer } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { useRouter } from 'next/navigation'
+import Footer from '@/app/components/footer'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import SidebarUser from '@/app/components/sidebar-user'
+import { useToast } from '@/components/ui/use-toast'
 
-enum PaymentStatus {
-    PENDING = 'PENDING',
-    COMPLETED = 'COMPLETED',
-    FAILED = 'FAILED',
-    REFUNDED = 'REFUNDED'
+interface EventsDto {
+  id: number
+  eventName: string
+  eventDescription: string
+  eventDate: string
+  eventCurrency: string
 }
 
 interface MyTicketsProps {
-  quantity: number,
-  paymentFees: number,
-  commission: number,
-  totalAmount: number,
-  ticketActive: boolean,
-  ticketTypeId: string,
-  paymentStatus: PaymentStatus,
-  paymentMethod: string
+  quantity: number
+  paymentFees: number
+  commission: number
+  totalAmount: number
+  currency: number
+  isTicketActive: boolean
+  ticketType: string
+  purchaseDate: string
+  eventsDto: EventsDto
+  qrCode: string // Assuming the QR code is like string (base64 encoded image)
 }
 
 const MyTickets = () => {
-
   const [myTickets, setMyTickets] = useState<MyTicketsProps[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState("All Statuses")
-
-  const route = useRouter();
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedTicket, setSelectedTicket] = useState<MyTicketsProps | null>(null)
+  const router = useRouter()
+  const {toast} = useToast();
 
   useEffect(() => {
     const fetchMyTickets = async () => {
-      try {
-        const response = await axios.get('http://localhost:8080/tickets/user', {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        setMyTickets(response.data)
-        setLoading(false)
-        console.log(response.data)
-      } catch (error) {
-        console.log(error)
-        setError("Failed to load the tickets")
-        setLoading(false)
-      }
+      const token = localStorage.getItem('token');
+      if(!token){
+          toast({
+              title: "Session Expired",
+              description: "Please login again.",
+              variant: "destructive"
+          })
+          setTimeout(()=> router.push("/login"), 2000);
+          return;
+        }  else {
+          try {
+            const response = await axios.get('http://localhost:8080/tickets/user', {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}` 
+              }
+            })
+            setMyTickets(response.data)
+            setLoading(false)
+          } catch (error) {
+            console.error(error)
+            setError("Failed to load the tickets")
+            setLoading(false)
+          } 
+        }
     }
-    fetchMyTickets();
-  }, [])
+    fetchMyTickets()
+  }, [router, toast])
 
   const handleLogOut = () => {
-    localStorage.removeItem("token");
-    route.push('/')
+    localStorage.removeItem("token")
+    router.push('/')
   }
 
-  return (
-      <div className="flex min-h-screen flex-col bg-black text-white">
-        <div className='text-black'>
-          <SidebarUser/>
+  const isTicketValid = (eventDate: string) => {
+    const currentDate = new Date()
+    const ticketDate = new Date(eventDate)
+    ticketDate.setHours(ticketDate.getHours() + 10) // Plus 10 hours to the event date 
+    return ticketDate > currentDate
+  }
+
+  const getTicketStatus = (isActive: boolean, eventDate: string) => {
+    if (!isTicketValid(eventDate)) return "Expired"
+    return isActive ? "Active" : "Inactive"
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "Active": return "secondary"
+      case "Inactive": return "default"
+      case "Expired": return "destructive"
+      default: return "default"
+    }
+  }
+
+  const filteredTickets = myTickets.filter(ticket => {
+    const status = getTicketStatus(ticket.isTicketActive, ticket.eventsDto.eventDate)
+    return (selectedStatus === "All Statuses" || selectedStatus === status) &&
+      (ticket.eventsDto.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       ticket.ticketType.toLowerCase().includes(searchTerm.toLowerCase()))
+  })
+
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
+  }
+
+  const handleShowTicket = (ticket: MyTicketsProps) => {
+    setSelectedTicket(ticket)
+  }
+
+  const handleViewEventDetails = () => {
+    if (selectedTicket) {
+      router.push(`/user/event-details/${selectedTicket.eventsDto.id}`)
+    }
+  }
+
+  const TicketCard = ({ ticket }: { ticket: MyTicketsProps }) => (
+    <Card className="mb-4">
+      <CardContent className="pt-6">
+        <h3 className="font-bold text-lg mb-2">{ticket.eventsDto.eventName}</h3>
+        <p className="text-sm text-gray-500 mb-2">Ticket Type: {ticket.ticketType}</p>
+        <p className="text-sm mb-2">Quantity: {ticket.quantity}</p>
+        <p className="text-sm mb-2">Total Amount: {ticket.totalAmount.toFixed(2)} {ticket.eventsDto.eventCurrency}</p>
+        <p className="text-sm mb-2">Purchase Date: {formatDate(ticket.purchaseDate)}</p>
+        <div className="flex justify-between items-center mt-4">
+        <Badge variant={getStatusBadgeVariant(status)}>
+              {status}
+            </Badge>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => handleShowTicket(ticket)}>Show</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-[350px] rounded-md">
+              <DialogHeader>
+                <DialogTitle>{ticket.eventsDto.eventName}</DialogTitle>
+                <DialogDescription>Ticket QR Code</DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col items-center">
+                <Image src={ticket.qrCode} alt="Ticket QR Code" width={200} height={200} />
+                <Button onClick={handleViewEventDetails} className="mt-4">Event Details</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
-        <div className="absolute z-20 top-4 right-4">
+      </CardContent>
+    </Card>
+  )
+
+  return (
+    <div className="flex min-h-screen flex-col bg-black sm:pl-16 pl-0 sm:pt-8 pt-0">
+      <header>
+        <SidebarUser />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-100 ml-12 sm:ml-0">My Tickets</h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                  variant="outline"
-                  size="icon"
-                  className="overflow-hidden rounded-full border-gray-700"
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
               >
                 <Image
-                    src="/profile_avatar.png"
-                    width={36}
-                    height={36}
-                    alt="Avatar"
-                    className="overflow-hidden rounded-full"
+                  src="/profile_avatar.png"
+                  width={36}
+                  height={36}
+                  alt="Avatar"
+                  className="rounded-full"
                 />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700">
-              <DropdownMenuLabel className="text-white">My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-gray-700"/>
-              <DropdownMenuItem className="text-white hover:bg-gray-800"><Headset
-                  className="h-4 w-4 mx-1 text-gray-400"/> Support</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogOut} className="text-white hover:bg-gray-800"> <LogOut
-                  className="h-4 w-4 mx-1 text-gray-400"/> Logout</DropdownMenuItem>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Headset className="mr-2 h-4 w-4 text-gray-500" />
+                Support
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogOut}>
+                <LogOut className="mr-2 h-4 w-4 text-gray-500" />
+                Logout
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <main className="flex-1 sm:ml-12 ml-0 px-4 py-16">
-          <h1 className="text-3xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-yellow-600">My
-            Tickets</h1>
-          {loading ? (
-              <p className='text-white'>Loading...</p>
-          ) : error ? (
-              <Alert variant="destructive">{error}</Alert>
-          ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 ">
-                {myTickets.map((ticket) => (
-                    <Card key={ticket.ticketTypeId} className="w-full ">
-                      <CardHeader>
-                        <h2 className="text-lg font-semibold">Ticket Type: {ticket.ticketTypeId}</h2>
-                      </CardHeader>
-                      <CardContent>
-                        <p><strong>Quantity:</strong> {ticket.quantity}</p>
-                        <p><strong>Payment Fees:</strong> ${ticket.paymentFees.toFixed(2)}</p>
-                        <p><strong>Commission:</strong> ${ticket.commission.toFixed(2)}</p>
-                        <p><strong>Total Amount:</strong> ${ticket.totalAmount.toFixed(2)}</p>
-                        <p><strong>Is Ticket Active:</strong> {ticket.ticketActive ? 'Yes' : 'No'}</p>
-                        <Badge className='block w-fit mt-4' variant={
-                          ticket.paymentStatus === PaymentStatus.COMPLETED ? "default" :
-                          ticket.paymentStatus === PaymentStatus.PENDING ? "secondary" :
-                          ticket.paymentStatus === PaymentStatus.FAILED ? "destructive" :
-                          ticket.paymentStatus === PaymentStatus.REFUNDED ? "destructive" : "secondary"
-                        }>
-                          {ticket.paymentStatus}
-                        </Badge>                        <Button variant="default" className="mt-4 inline-flex items-center justify-center whitespace-nowrap
-                      rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1
-                      focus-visible:ring-neutral-950 disabled:pointer-events-none disabled:opacity-50
-                      h-9 px-4 py-2 bg-amber-500 text-black hover:bg-amber-600">View Details</Button>
+      </header>
 
-                      </CardContent>
-                    </Card>
-                ))}
+      <main className="flex-1 bg-black max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
+        {loading ? (
+          <div className="flex justify-center items-center h-screen">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-500"></div>
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger className="w-[180px] bg-white text-black">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Statuses">All Statuses</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="text"
+                  placeholder="Search events or tickets"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm text-white"
+                />
               </div>
-          )}
-        </main>
-      </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm">
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
+                <Button variant="outline" size="sm">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </div>
+            </div>
+
+            {/* Mobile view as cards */}
+            <div className="md:hidden">
+              {filteredTickets.map((ticket) => (
+                <TicketCard key={ticket.ticketType} ticket={ticket} />
+              ))}
+            </div>
+
+            {/* Desktop view as table */}
+            <div className="hidden md:block">
+              <Card>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Event</TableHead>
+                          <TableHead>Ticket Type</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Total Amount</TableHead>
+                          <TableHead>Purchase Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTickets.map((ticket) => (
+                          <TableRow key={ticket.ticketType}>
+                            <TableCell>{ticket.eventsDto.eventName}</TableCell>
+                            <TableCell>{ticket.ticketType}</TableCell>
+                            <TableCell>{ticket.quantity}</TableCell>
+                            <TableCell>{ticket.totalAmount.toFixed(2)} {ticket.eventsDto.eventCurrency}</TableCell>
+                            <TableCell>{formatDate(ticket.purchaseDate)}</TableCell>
+                            <TableCell>
+                            <Badge variant={getStatusBadgeVariant(status)}>
+                                  {status}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" onClick={() => handleShowTicket(ticket)}>Show</Button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                  <DialogHeader>
+                                    <DialogTitle>{ticket.eventsDto.eventName}</DialogTitle>
+                                    <DialogDescription>Ticket QR Code</DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex flex-col items-center">
+                                    <Image src={ticket.qrCode} alt="Ticket QR Code" width={200} height={200} />
+                                    <Button onClick={handleViewEventDetails} className="mt-4">Event Details</Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+      </main>
+      <Footer />
+    </div>
   )
 }
 
-export default MyTickets;
+export default MyTickets

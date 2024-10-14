@@ -224,7 +224,10 @@ export default function Attendees() {
           </div>
         </div>
       </main>
-      <Footer />
+      
+      <div className="sm:pl-14 pl-0">
+          <Footer />
+        </div>
     </div>
   )
 }
