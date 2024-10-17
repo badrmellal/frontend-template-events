@@ -7,7 +7,6 @@ import { QrCode, Smartphone, Mail, User, CheckCircle, XCircle, Camera, Shield, C
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import Image from 'next/image'
 import { cn } from "@/lib/utils"
 import { ExpandableImage } from '@/app/components/expanded-image'
 import { NavigationMenuHome } from '@/app/components/navbar-home'
@@ -19,7 +18,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FaUserCircle } from 'react-icons/fa'
 import { MdSupportAgent } from 'react-icons/md'
 import { Icons } from '@/components/ui/icons'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import QRCodeFAQSection from './qrcode-faqs'
 import Footer from '@/app/components/footer'
 

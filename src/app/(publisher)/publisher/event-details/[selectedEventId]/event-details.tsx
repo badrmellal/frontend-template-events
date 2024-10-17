@@ -196,7 +196,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-black">
-        <div className="animate-ping rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
       </div>
     );
   }
@@ -220,7 +220,7 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
             <Button
               variant="outline"
               size="icon"
-              className="overflow-hidden rounded-full border-gray-700"
+              className="overflow-hidden rounded-full"
             >
               <Image
                 src="/profile_avatar.png"
@@ -231,11 +231,11 @@ export default function EventDetails({ eventId }: EventDetailsProps) {
               />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-gray-900 border-gray-700">
-            <DropdownMenuLabel className="text-white">My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-gray-700" />
-            <DropdownMenuItem className="text-white hover:bg-gray-800"><Headset className="h-4 w-4 mx-1 text-gray-400" /> Support</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogOut} className="text-white hover:bg-gray-800"> <LogOut className="h-4 w-4 mx-1 text-gray-400" /> Logout</DropdownMenuItem>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem ><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

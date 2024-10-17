@@ -78,7 +78,7 @@ interface Event {
           if (storedBooking) {
             const bookingDetails = JSON.parse(storedBooking);
             setBooking(bookingDetails);
-             // Verify the total price
+             // Here we verify the total price
           const feesResponse = await axios.post('/api/verify-fees', {
             price: bookingDetails.price / bookingDetails.quantity, 
             quantity: bookingDetails.quantity,
@@ -192,7 +192,7 @@ interface Event {
                 quantity: booking.quantity,
                 ticketTypeName: booking.ticketType,
                 paymentMethod: paymentMethod,
-                promoCode: promoCode
+                promoCode: promoCode,
               }
           }
         );
@@ -295,7 +295,7 @@ interface Event {
             <div className="lg:col-span-2">
               <Card className="bg-gray-950 border-gray-600">
                 <CardHeader>
-                  <CardTitle className="text-2xl font-bold text-amber-500">
+                  <CardTitle className="text-2xl font-bold text-white">
                     {event.isFreeEvent ? 'Booking Confirmation' : 'Payment Details'} for {event.eventName}
                   </CardTitle>
                 </CardHeader>

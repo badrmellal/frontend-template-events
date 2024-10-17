@@ -248,73 +248,12 @@ const MyEvents: React.FC = () => {
     });
 };
 
-  const handleSaveEvent = async (updatedEvent: Event, newImages: File[], newVideo?: File) => {
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-  
-    formData.append('eventName', updatedEvent.eventName);
-    formData.append('eventCategory', updatedEvent.eventCategory);
-    formData.append('eventDescription', updatedEvent.eventDescription);
-    formData.append('isFreeEvent', (updatedEvent.isFreeEvent ?? false).toString());
-    formData.append('eventCurrency', updatedEvent.eventCurrency);
-     // Updating the date formatting to use ISO 8601
-     const eventDate = new Date(updatedEvent.eventDate);
-     const utcDate = new Date(Date.UTC(
-         eventDate.getUTCFullYear(),
-         eventDate.getUTCMonth(),
-         eventDate.getUTCDate(),
-         eventDate.getUTCHours(),
-         eventDate.getUTCMinutes(),
-         0  
-     ));
-     const formattedDate = format(utcDate, "yyyy-MM-dd'T'HH:mm:ss'Z'");
-     formData.append('eventDate', formattedDate);
-    formData.append('addressLocation', updatedEvent.addressLocation);
-    formData.append('googleMapsUrl', updatedEvent.googleMapsUrl);
-    formData.append('totalTickets', (updatedEvent.totalTickets ?? 0).toString());
-
-    formData.append('ticketTypes', JSON.stringify(updatedEvent.ticketTypes));
-
-    // existing images
-    updatedEvent.eventImages.forEach((image) => {
-      formData.append(`eventImages`, image);
-    });
-
-    // new images
-    newImages.forEach((file) => {
-      formData.append(`newEventImages`, file);
-    });
-
-    if (newVideo) {
-      formData.append('eventVideo', newVideo);
-    }
-    
-      const response = await axios.put(`http://localhost:8080/events/${updatedEvent.id}`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": 'multipart/form-data'
-        },
-      });
-      setEvents(prevEvents => prevEvents.map(event => 
-        event.id === updatedEvent.id ? response.data : event
-      ));
-      toast({
-        title: "Event updated successfully",
-        description: "Your event has been updated.",
-      });
-      setTimeout(()=>{
-        window.location.reload();
-      }, 1500)
-    } catch (error) {
-      console.error('Error updating event:', error);
-      toast({
-        variant: "destructive",
-        title: "Error updating event",
-        description: "Please try again later.",
-      });
-    }
-  };
+const handleSaveEvent = (updatedEvent: Event) => {
+  setEvents(prevEvents => prevEvents.map(event => 
+    event.id === updatedEvent.id ? updatedEvent : event
+  ));
+  setEditingEvent(null);
+};
 
   const handleCreateEvent = () => {
     router.push("/publisher/create-event")
@@ -380,15 +319,15 @@ const MyEvents: React.FC = () => {
       <div className="flex items-center">
         <ListFilter className="mr-2 h-5 w-5 text-gray-200" />
         <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-          <SelectTrigger className="w-[180px] bg-gray-200 text-black border border-amber-400 focus:ring-2 focus:ring-amber-100 focus:border-transparent transition-all duration-200 ease-in-out hover:bg-gray-300">
+          <SelectTrigger className="w-[180px] bg-gray-200 text-black border  focus:ring-2 focus:ring-gray-100 focus:border-transparent transition-all duration-200 ease-in-out hover:bg-gray-200">
             <SelectValue placeholder="Filter events" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-100 text-black border border-amber-300 rounded-md overflow-hidden">
+          <SelectContent className="bg-gray-100 text-black border rounded-md overflow-hidden">
             {filters.map((filter) => (
               <SelectItem 
                 key={filter.value} 
                 value={filter.value}
-                className="focus:bg-gray-300 focus:text-black hover:bg-gray-200 transition-colors duration-150"
+                className="focus:bg-gray-200 focus:text-black hover:bg-gray-200 transition-colors duration-150"
               >
                 {filter.label}
               </SelectItem>
@@ -432,11 +371,11 @@ const MyEvents: React.FC = () => {
         <div className="bg-black p-3 sm:p-8 rounded-lg shadow-lg">
           <h1 className="text-3xl text-white font-bold tracking-tight">My Events</h1>
         <div className="flex items-center my-4 justify-between">
-          <Button className="bg-amber-500 text-black hover:bg-black hover:text-amber-500" onClick={handleCreateEvent}>
+          <Button className="bg-white text-black hover:bg-black hover:text-white" onClick={handleCreateEvent}>
             <Plus className="mr-2 h-4 w-4" /> Create New Event
           </Button>
         </div>
-          <div className="flex flex-col sm:flex-row items-center mb-8 space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center mb-8 space-x-4">
             <Input placeholder="Search events..." className="max-w-sm mb-4 sm:mb-0 text-white" 
             value={searchTerm}
             onChange={handleSearchChange}
@@ -446,7 +385,7 @@ const MyEvents: React.FC = () => {
           </div>
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-yellow-300"></div>
+              <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-amber-500"></div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -596,13 +535,15 @@ const MyEvents: React.FC = () => {
 
       {editingEvent && (
         <EditEventModal
-          event={editingEvent}
-          onClose={() => setEditingEvent(null)}
-          onSave={handleSaveEvent}
+        event={editingEvent}
+        onClose={() => setEditingEvent(null)}
+        onSave={handleSaveEvent}
         />
       )}
 
-      <Footer />
+        <div className="sm:pl-14 pl-0">
+          <Footer />
+        </div>
     </div>
   );
 };

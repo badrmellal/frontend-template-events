@@ -20,13 +20,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Icons } from "@/components/ui/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { JwtPayload, jwtDecode } from "jwt-decode";
-import Link from "next/link";
 import { motion } from "framer-motion"
 import { handleAuthRedirect } from './components/auth-redirect'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FaUserCircle } from "react-icons/fa";
 import { MdAdminPanelSettings, MdCategory, MdEvent, MdOutlineWebhook, MdSupportAgent } from "react-icons/md";
-import { FcSupport } from "react-icons/fc";
 import ReactCountryFlag from "react-country-flag";
 import Footer from "./components/footer";
 import { FaCampground, FaCar, FaGamepad, FaGraduationCap, FaHeart, FaPalette, FaUtensils } from "react-icons/fa6";
@@ -312,12 +310,10 @@ export default function Home() {
   const checkIfOrganization = (): boolean => {
     // For now it will always return false as we didn't implemented organization event creation
     //TODO
-    // please leave this alone i will do it later
     return false;
   };
 
   const handleBookNow = () => {
-
     if (!validateToken()) {
       toast({
         title: "Authentication required",
@@ -327,25 +323,20 @@ export default function Home() {
       handleAuthRedirect(router, pathname);
       return;
     }
-    if (selectedEvent && selectedTicketType) {
-      const isOrganization = checkIfOrganization();
-      const { totalPaymentFees, commission, total } = calculateFeesAndCommission(
-        selectedTicketType.price, 
-        ticketQuantity, 
-        isOrganization,
-        selectedEvent.eventCurrency
-      );
     
+    if (selectedEvent && selectedTicketType) {
+      const { subtotal, totalPaymentFees, commission, total } = calculateTotal();
+  
       const bookingDetails: BookingDetails = {
         eventId: selectedEvent.id,
         ticketType: selectedTicketType.name,
         quantity: ticketQuantity,
-        price: selectedTicketType.price * ticketQuantity,
-        paymentFees: totalPaymentFees, // this includes only Stripe fees
+        price: subtotal,
+        paymentFees: totalPaymentFees,
         commission,
         total,
       };
-    
+  
       localStorage.setItem('currentBooking', JSON.stringify(bookingDetails));
       router.push(`user/event-details/${selectedEvent.id}`);
     } else {
@@ -392,15 +383,30 @@ export default function Home() {
   const calculateTotal = () => {
     if (selectedEvent && selectedTicketType) {
       const isOrganization = checkIfOrganization();
-      const { totalPaymentFees, commission, total } = calculateFeesAndCommission(
+      const { 
+        subtotal, 
+        stripeFee, 
+        commission, 
+        totalToCharge 
+      } = calculateFeesAndCommission(
         selectedTicketType.price,
         ticketQuantity,
         isOrganization,
         selectedEvent.eventCurrency
       );
-      return { subtotal: selectedTicketType.price * ticketQuantity, totalPaymentFees, commission, total };
+      return { 
+        subtotal, 
+        totalPaymentFees: stripeFee, 
+        commission, 
+        total: totalToCharge
+      };
     }
-    return { subtotal: 0, totalPaymentFees: 0, commission: 0, total: 0 };
+    return { 
+      subtotal: 0, 
+      totalPaymentFees: 0, 
+      commission: 0, 
+      total: 0
+    };
   };
 
   const sliderSettings = {

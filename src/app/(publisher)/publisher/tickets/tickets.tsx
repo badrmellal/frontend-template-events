@@ -283,7 +283,10 @@ export default function Tickets() {
         </SheetContent>
       </Sheet>
 
-      <Footer />
+
+      <div className="sm:pl-14 pl-0">
+          <Footer />
+        </div>
     </div>
   )
 }

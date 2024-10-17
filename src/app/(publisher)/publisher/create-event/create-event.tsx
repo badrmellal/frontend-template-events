@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import { format, set } from "date-fns";
-import { Calendar as CalendarIcon, Headset, Info, LogOut, Plus, Tag, Ticket, Upload, X } from "lucide-react"; 
+import { Briefcase, Building2, Calendar as CalendarIcon, Car, Dumbbell, Film, Gamepad2, GraduationCap, Headset, Heart, LogOut, Moon, Music, Palette, Plus, Tag, Tent, Ticket, Upload, Users, UtensilsCrossed, X } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -28,7 +28,8 @@ import ReactCountryFlag from 'react-country-flag';
 import TimePicker from '@/app/components/time-picker';
 import { motion } from 'framer-motion';
 import Footer from '@/app/components/footer';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FaSwimmer } from 'react-icons/fa';
+import { MdNightlife } from 'react-icons/md';
 
 
 interface EventFormInputs {
@@ -59,22 +60,22 @@ interface TicketType {
 }
 
 const eventCategories = [
-    'Night Party',
-    'Swimming Party',
-    'Sport & Fitness',
-    'Media & Films',
-    'Government',
-    'Concert',
-    'Conference',
-    'Startups & Business',
-    'Food & Drink',
-    'Art & Culture',
-    'Education',
-    'Outdoor & Adventure',
-    'Automotive',
-    'Charity & Causes',
-    'Gaming'
-]; 
+    { name: 'Night Party', icon: MdNightlife },
+    { name: 'Swimming Party', icon: FaSwimmer },
+    { name: 'Sport & Fitness', icon: Dumbbell },
+    { name: 'Media & Films', icon: Film },
+    { name: 'Government', icon: Building2 },
+    { name: 'Concert', icon: Music },
+    { name: 'Conference', icon: Users },
+    { name: 'Startups & Business', icon: Briefcase },
+    { name: 'Food & Drink', icon: UtensilsCrossed },
+    { name: 'Art & Culture', icon: Palette },
+    { name: 'Education', icon: GraduationCap },
+    { name: 'Outdoor & Adventure', icon: Tent },
+    { name: 'Automotive', icon: Car },
+    { name: 'Charity & Causes', icon: Heart },
+    { name: 'Gaming', icon: Gamepad2 }
+];
 
 
 const CreateEvent: React.FC = () => {
@@ -112,7 +113,7 @@ const CreateEvent: React.FC = () => {
         if (currency) {
             setFormData(prev => ({
                 ...prev,
-                eventCountry: value,
+                eventCountry: value, 
                 eventCurrency: currency.code,
                 ticketTypes: prev.ticketTypes.map(ticket => ({
                     ...ticket,
@@ -435,14 +436,17 @@ const CreateEvent: React.FC = () => {
                                                 <SelectValue placeholder="Select a category" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectGroup>
-                                                    <SelectLabel>Categories</SelectLabel>
-                                                    {eventCategories.map((category) => (
-                                                        <SelectItem key={category} value={category}>
-                                                            {category}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectGroup>
+                                            <SelectGroup>
+                                                <SelectLabel>Categories</SelectLabel>
+                                                {eventCategories.map((category) => (
+                                                   <SelectItem key={category.name} value={category.name}>
+                                                   <div className="flex items-center">
+                                                       {React.createElement(category.icon, { className: "h-4 w-4 mr-2" })}
+                                                       <span>{category.name}</span>
+                                                   </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectGroup>
                                             </SelectContent>
                                         </Select>
                                         {errors.eventCategory && <p className="text-red-500 text-sm">{errors.eventCategory}</p>}
@@ -717,12 +721,12 @@ const CreateEvent: React.FC = () => {
                     </Card>
                 </div>
                 <Dialog open={isCreatingEvent} onOpenChange={setIsCreatingEvent}>
-                    <DialogContent className="sm:max-w-[425px] max-w-[370px] bg-gray-950 text-white">
+                    <DialogContent className="sm:max-w-[425px] max-w-[360px] border-0 rounded-lg bg-black text-white">
                     <div className="flex flex-col items-center justify-center p-4">
                         <Spinner />
                         <h2 className="mt-4 text-xl font-semibold">Creating Your Event</h2>
                         <p className="mt-2 text-gray-400 text-center">
-                        Please wait while we set up your amazing event...
+                        Please wait while we set up your event...
                         </p>
                         <motion.div
                         className="mt-4 text-amber-500"
@@ -752,6 +756,9 @@ const CreateEvent: React.FC = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+                <div className="sm:pl-14 pl-0">
+                <Footer />
+                </div>
             </div>
     );
 };

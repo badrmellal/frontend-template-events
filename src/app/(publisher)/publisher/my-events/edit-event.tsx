@@ -17,6 +17,8 @@ import TimePicker from '@/app/components/time-picker';
 import Image from 'next/image';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FaMoneyBillWave } from "react-icons/fa";
+import { useToast } from '@/components/ui/use-toast';
+import axios from 'axios';
 
 
 interface TicketType {
@@ -54,7 +56,7 @@ interface EventFormInputs {
     eventImages: string[];
     eventVideo?: string | null;
     isFreeEvent: boolean;
-    eventCurrency: string;
+    eventCurrency: string | undefined;
     eventDate: Date | undefined;
     eventTime: string;
     addressLocation: string;
@@ -62,12 +64,8 @@ interface EventFormInputs {
     ticketTypes: TicketType[];
 }
 
-const getCurrencyCountryCode = (currencyCode: string) => {
-    const country = africanCountries.find(c => c.currency.code === currencyCode);
-    return country ? country.code : '';
-};
 
-const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (updatedEvent: Event, newImages: File[], newVideo? : File) => void }> = ({ event, onClose, onSave }) => {
+const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (updatedEvent: Event) => void }> = ({ event, onClose, onSave }) => {
     const [formData, setFormData] = useState<EventFormInputs>({
         eventName: event.eventName,
         eventCategory: event.eventCategory,
@@ -75,7 +73,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         eventImages: event.eventImages,
         eventVideo: event.eventVideo,
         isFreeEvent: event.isFreeEvent,
-        eventCurrency: getCurrencyCountryCode(event.eventCurrency),
+        eventCurrency: event.eventCurrency,
         eventDate: event.eventDate ? parseISO(event.eventDate) : undefined,
         eventTime: event.eventDate ? format(parseISO(event.eventDate), "HH:mm") : '',
         addressLocation: event.addressLocation,
@@ -85,9 +83,11 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
             isFree: event.isFreeEvent || tt.isFree
         }))
     });
+    const [existingImages, setExistingImages] = useState<string[]>(event.eventImages);
     const [newImages, setNewImages] = useState<File[]>([]);
     const [newVideo, setNewVideo] = useState<File | null>(null);
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const {toast} = useToast();
 
 
     const validateInputs = () => {
@@ -145,13 +145,13 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         }));
     };
 
-    const handleCurrencyChange = (value: string) => {
+    const handleCurrencyChange = (currencyCode: string) => {
         setFormData(prev => ({
             ...prev,
-            eventCurrency: value,
+            eventCurrency: currencyCode,
             ticketTypes: prev.ticketTypes.map(ticket => ({
                 ...ticket,
-                currency: value
+                currency: currencyCode
             }))
         }));
     };
@@ -161,33 +161,34 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
     };
 
     const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, files } = e.target;
-      if (files && files.length > 0) {
+        const { name, files } = e.target;
+        if (files && files.length > 0) {
           if (name === 'eventImages') {
-              setNewImages(prev => [...prev, ...Array.from(files)]);
+            setNewImages(prev => [...prev, ...Array.from(files)]);
+            console.log("New images added:", files);
+
           } else if (name === 'eventVideo') {
-              setNewVideo(files[0]);
+            setNewVideo(files[0]);
           }
-      }
-  }, []);
+        }
+      }, []);
 
-    const removeExistingImage = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            eventImages: prev.eventImages.filter((_, i) => i !== index)
-        }));
-    };
-
-    const removeNewImage = (index: number) => {
+      const removeExistingImage = (index: number) => {
+        setExistingImages(prev => prev.filter((_, i) => i !== index));
+      };
+      
+      const removeNewImage = useCallback((index: number) => {
         setNewImages(prev => prev.filter((_, i) => i !== index));
-    };
+      }, []);
+    
+
 
     const handleTicketTypeChange = (index: number, field: keyof TicketType, value: string | number | boolean) => {
         const updatedTicketTypes = [...formData.ticketTypes];
         updatedTicketTypes[index] = { 
             ...updatedTicketTypes[index], 
             [field]: field === 'price' || field === 'totalTickets' || field === 'soldTickets' ? Number(value) : value,
-            currency: formData.eventCurrency,
+            currency: formData.eventCurrency || '',
             isFree: formData.isFreeEvent
         };
        
@@ -201,11 +202,11 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
     const addTicketType = () => {
         setFormData(prev => ({
             ...prev,
-            ticketTypes: [...prev.ticketTypes, { 
-                name: '', 
-                price: 0, 
-                currency: prev.eventCurrency, 
-                totalTickets: 0, 
+            ticketTypes: [...prev.ticketTypes, {
+                name: '',
+                price: 0,
+                currency: prev.eventCurrency || '', 
+                totalTickets: 0,
                 soldTickets: 0,
                 isFree: prev.isFreeEvent,
                 ticketTypeId: '' // will be generated on the backend bro
@@ -223,9 +224,15 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
         }
     };
 
-    const handleSave = () => {
-      if (validateInputs()) {
-        const combinedDateTime = formData.eventDate
+    //TODO
+    // We should fix image updates and deletes it doesn't work
+    const handleSave = async(e: React.MouseEvent) => {
+        e.preventDefault();
+        console.log("Save button clicked");
+        console.log("Current form data:", formData);
+    console.log("Current ticket types:", formData.ticketTypes);
+        if (validateInputs()) {
+          const combinedDateTime = formData.eventDate
             ? new Date(Date.UTC(
                 formData.eventDate.getUTCFullYear(),
                 formData.eventDate.getUTCMonth(),
@@ -235,18 +242,71 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                 0  // seconds
               ))
             : undefined;
+      
+            const updatedFormData = new FormData();
 
-        const eventToSave = {
-            ...event,
-            ...formData,
-            eventDate: combinedDateTime ? format(combinedDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'") : '',
-            eventImages: [...formData.eventImages, ...newImages.map(file => URL.createObjectURL(file))]
-        };
-        onSave(eventToSave, newImages, newVideo || undefined);
-        onClose();
-    } else {
-      return;
-    }
+            // Append all the event data
+            updatedFormData.append('eventName', formData.eventName);
+            updatedFormData.append('eventCategory', formData.eventCategory);
+            updatedFormData.append('eventDescription', formData.eventDescription);
+            updatedFormData.append('isFreeEvent', (formData.isFreeEvent ?? false).toString());
+            updatedFormData.append('eventCurrency', formData.eventCurrency || '');
+            updatedFormData.append('eventDate', combinedDateTime ? format(combinedDateTime, "yyyy-MM-dd'T'HH:mm:ss'Z'") : '');
+            updatedFormData.append('addressLocation', formData.addressLocation);
+            updatedFormData.append('googleMapsUrl', formData.googleMapsUrl);
+            updatedFormData.append('totalTickets', formData.ticketTypes.reduce((sum: number, tt: TicketType) => sum + tt.totalTickets, 0).toString());
+            updatedFormData.append('ticketTypes', JSON.stringify(formData.ticketTypes));
+    
+           // Append existing images
+           existingImages.forEach((imageUrl) => {
+            updatedFormData.append(`existingImages`, imageUrl);
+            });
+
+    
+            // Append new images
+            console.log("New images being sent:", newImages);
+            newImages.forEach((file) => {
+                updatedFormData.append(`newImages`, file);
+                console.log(`Appending new image: ${file.name}`);
+            });
+    
+            // Append video if it exists
+            if (newVideo) {
+                updatedFormData.append('eventVideo', newVideo);
+            } else if (formData.eventVideo) {
+                updatedFormData.append('eventVideo', formData.eventVideo);
+            }
+
+            try {
+                const token = localStorage.getItem("token");
+                const response = await axios.put(`http://localhost:8080/events/${event.id}`, updatedFormData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": 'multipart/form-data'
+                    },
+                });
+
+                onSave(response.data);
+                toast({
+                    title: "Event updated successfully",
+                    description: "Your event has been updated.",
+                });
+                onClose();
+            } catch (error) {
+                console.error("Error saving event:", error);
+                toast({
+                    title: "Error saving",
+                    description: "An error occurred while saving the event. Please try again.",
+                    variant: "destructive"
+                });
+            }
+        } else {
+            toast({
+                title: "Error saving",
+                description: "Please fix the errors before proceeding.",
+                variant: "destructive"
+            });
+        }
     };
 
     return (
@@ -318,7 +378,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                                 </SelectTrigger>
                                 <SelectContent>
                                     {africanCountries.map((country) => (
-                                        <SelectItem key={country.code} value={country.code}>
+                                        <SelectItem key={country.code} value={country.currency.code}>
                                             <div className="flex items-center">
                                                 <ReactCountryFlag
                                                     countryCode={country.code}
@@ -458,7 +518,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                                     {!formData.isFreeEvent && ticketType.price > 0 && (
                                         <p className="text-sm text-gray-600 mt-2">
                                             <Tag className="inline-block mr-2 h-4 w-4" />
-                                            Formatted price: {formatCurrency(ticketType.price, formData.eventCurrency)}
+                                            Formatted price: {formatCurrency(ticketType.price, formData.eventCurrency ? formData.eventCurrency : '')}
                                         </p>
                                     )}
                                 </div>
@@ -472,56 +532,57 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                         <div className="space-y-2">
                             <Label>Event Images</Label>
                             <div className="grid sm:grid-cols-3 grid-cols-2 gap-4">
-                                {formData.eventImages.map((image, index) => (
-                                    <div key={index} className="relative">
-                                        <Image
-                                            src={image}
-                                            alt={`Event image ${index + 1}`}
-                                            width={200}
-                                            height={200}
-                                            className="rounded-lg object-cover w-full h-32"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeExistingImage(index)}
-                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                            {existingImages.map((image, index) => (
+                                <div key={`existing-${index}`} className="relative">
+                                    <Image
+                                    src={image}
+                                    alt={`Event image ${index + 1}`}
+                                    width={200}
+                                    height={200}
+                                    className="rounded-lg object-cover w-full h-32"
+                                    />
+                                    <button
+                                    type="button"
+                                    onClick={() => removeExistingImage(index)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                    >
+                                    <X className="h-4 w-4" />
+                                    </button>
+                                </div>
                                 ))}
                                 {newImages.map((file, index) => (
-                                    <div key={`new-${index}`} className="relative">
-                                        <Image
-                                            src={URL.createObjectURL(file)}
-                                            alt={`New event image ${index + 1}`}
-                                            width={200}
-                                            height={200}
-                                            className="rounded-lg object-cover w-full h-32"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeNewImage(index)}
-                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                                <label className="flex flex-col items-center justify-center w-full sm:h-32 h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <Upload className="w-8 h-8 mb-4 text-gray-500" />
-                                        <p className="mb-2 p-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                                    </div>
-                                    <input
-                                        id="eventImages"
-                                        name="eventImages"
-                                        type="file"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                        multiple
-                                        accept="image/*"
+                                <div key={`new-${index}`} className="relative">
+                                    <Image
+                                    src={URL.createObjectURL(file)}
+                                    alt={`New event image ${index + 1}`}
+                                    width={200}
+                                    height={200}
+                                    className="rounded-lg object-cover w-full h-32"
                                     />
+                                    <button
+                                    type="button"
+                                    onClick={() => removeNewImage(index)}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                                    >
+                                    <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                ))}
+                           
+                                <label className="flex flex-col items-center justify-center w-full sm:h-32 h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <Upload className="w-8 h-8 mb-4 text-gray-500" />
+                                    <p className="mb-2 p-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                </div>
+                                <input
+                                    id="eventImages"
+                                    name="eventImages"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                    multiple
+                                    accept="image/*"
+                                />
                                 </label>
                             </div>
                             {errors.eventImages && <p className="text-red-500 text-sm">{errors.eventImages}</p>}
@@ -560,7 +621,7 @@ const EditEventModal: React.FC<{ event: Event; onClose: () => void; onSave: (upd
                     </div>
                 </ScrollArea>
                 <DialogFooter>
-                    <Button type="submit" onClick={handleSave}>Save changes</Button>
+                    <Button type="button" onClick={handleSave}>Save changes</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

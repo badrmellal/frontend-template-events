@@ -21,6 +21,10 @@ const nextConfig = {
         {
           protocol: 'https',
           hostname: 'africa-events.s3.eu-west-3.amazonaws.com'
+        },
+        {
+          protocol: 'https',
+          hostname: '*.amazonaws.com'
         }
       ]
     }
