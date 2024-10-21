@@ -26,6 +26,8 @@ const DashboardPublisher = ()=> {
         router.push("/publisher/create-event")
       }
 
+      //TODO Upcoming events attendees calculation
+
     return (
         <div className="bg-black min-h-screen">
             <SidebarPublisher />

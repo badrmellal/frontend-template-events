@@ -15,57 +15,13 @@ import Footer from "@/app/components/footer"
 import axios from "axios"
 import { jwtDecode } from "jwt-decode"
 import {formatDate} from "date-fns";
+import {  Ticket } from "@/types/user"
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  profileImageUrl: string | null;
-  phoneNumber: string | null;
-  role: string | null;
-  joinDate: string | null;
-  lastLoginDate: string | null;
-  lastLoginDateDisplay: string | null;
-  enabled: boolean;
-  verificationToken: string | null;
-  verificationTokenExpiryDate: string | null;
-  countryCode: string | null;
-}
 
-interface Event {
-  id: number;
-  eventCategory: string | null;
-  eventName: string;
-  eventDescription: string;
-  eventVideo: string | null;
-  eventCurrency: string | null;
-  eventManagerUsername: string | null;
-  eventDate: string;
-  addressLocation: string | null;
-  googleMapsUrl: string | null;
-  eventCreationDate: string | null;
-  totalTickets: number;
-  remainingTickets: number;
-  eventImages: string[] | null;
-  ticketTypes: any | null; // You might want to define a more specific type here
-  freeEvent: boolean;
-  approved: boolean;
-}
 
-export interface Ticket {
-  quantity: number;
-  id: string;
-  fees: number;
-  vat: number;
-  totalAmount: number;
-  ticketType: string;
-  paymentStatus: "PENDING"|"COMPLETED"|"FAILED"|"REFUNDED";
-  usersDto: User;
-  eventsDto: Event;
-  ticketActive: boolean;
-  purchaseDate: Date;
-}
 
+
+//TODO verify ticket details problm
 
 export default function Tickets() {
   const [searchTerm, setSearchTerm] = useState("")

@@ -1,7 +1,5 @@
-import Link from "next/link"
-import { Calendar, Download, Headset, LogOut, MoreHorizontal, Search, Users } from "lucide-react"
+import {  Download, Headset, LogOut, MoreHorizontal} from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,20 +36,75 @@ import {
 import SidebarPublisher from "@/app/components/sidebar-publisher"
 import Image from "next/image"
 import Footer from "@/app/components/footer"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { Event, Ticket } from "@/types/user"
+import { jwtDecode } from "jwt-decode"
+import axios from "axios"
 
 export default function Attendees() {
 
-
+  const route = useRouter();
+  const [tickets, setTickets] =useState<Ticket[] | undefined>()
+  const [isLoading, setIsLoading] = useState(true)
+  const [events, setEvents] = useState<Event[] | undefined>()
   const handleLogOut = () => {
     localStorage.removeItem("token");
-    window.location.reload();
-};
+    route.push('/login')
+  };
+//TODO make data dynamic
+async function fetchMultipleData() {
+  try {
+    const token = localStorage.getItem('token');
+    //decode token
+    if (token) {
+      const decodedToken = jwtDecode(token);
+      const email = decodedToken.sub;
+      const [tickets, events] = await Promise.all([
+      axios.get(`http://localhost:8080/publisher/tickets-details/${email}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+        ),
+      axios.get(`http://localhost:8080/publisher/events-details/${email}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+        ),
+    ]);
+
+    return {
+      tickets: tickets.data,
+      events: events.data,
+    };}
+  } catch (error) {
+    throw error;
+  }
+}
+useEffect(()=>{
+  const fetching = async ()=>{
+    try {
+      setIsLoading(true);
+        const results = await fetchMultipleData();
+        setTickets(results?.tickets);
+        setEvents(results?.events)
+    }catch(err){
+      console.error(err);
+    }finally {
+      setIsLoading(false);
+    }
+  }
+  fetching();
+},[])
 
   return (
     <div className="flex min-h-screen bg-black flex-col">
        <SidebarPublisher />
      <div className="flex justify-end pt-4 pr-4">
-           
                 <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                 <Button
@@ -100,9 +153,9 @@ export default function Attendees() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Events</SelectItem>
-                        <SelectItem value="summer-beats-2023">Summer Beats 2023</SelectItem>
-                        <SelectItem value="tech-conference-2023">Tech Conference 2023</SelectItem>
-                        <SelectItem value="food-wine-expo">Food & Wine Expo</SelectItem>
+                        {events?.map((event,index)=>(
+                          <SelectItem value="summer-beats-2023" key={index}>{event.eventName}</SelectItem>
+                        )) }
                       </SelectContent>
                     </Select>
                     <Select>
@@ -129,93 +182,32 @@ export default function Attendees() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">Alice Johnson</TableCell>
-                        <TableCell>alice@example.com</TableCell>
-                        <TableCell>Summer Beats 2023</TableCell>
-                        <TableCell>VIP</TableCell>
-                        <TableCell><Badge>Confirmed</Badge></TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Information</DropdownMenuItem>
-                              <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
-                              <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Bob Smith</TableCell>
-                        <TableCell>bob@example.com</TableCell>
-                        <TableCell>Tech Conference 2023</TableCell>
-                        <TableCell>General Admission</TableCell>
-                        <TableCell><Badge variant="outline">Pending</Badge></TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Information</DropdownMenuItem>
-                              <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
-                              <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Carol Davis</TableCell>
-                        <TableCell>carol@example.com</TableCell>
-                        <TableCell>Food & Wine Expo</TableCell>
-                        <TableCell>Early Bird</TableCell>
-                        <TableCell><Badge>Confirmed</Badge></TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Edit Information</DropdownMenuItem>
-                              <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
-                              <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">David Wilson</TableCell>
-                        <TableCell>david@example.com</TableCell>
-                        <TableCell>Summer Beats 2023</TableCell>
-                        <TableCell>General Admission</TableCell>
-                        <TableCell><Badge variant="secondary">Cancelled</Badge></TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>View Details</DropdownMenuItem>
-                              <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
-                              <DropdownMenuItem>Reinstate Ticket</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
+                      {
+                        tickets?.map((ticket, index)=>(
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{ticket.usersDto.username}</TableCell>
+                            <TableCell>{ticket.usersDto.email}</TableCell>
+                            <TableCell>{ticket.eventsDto.eventName}</TableCell>
+                            <TableCell>{ticket.ticketType}</TableCell>
+                            <TableCell><Badge>{ticket.paymentStatus}</Badge></TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>View Details</DropdownMenuItem>
+                                  <DropdownMenuItem>Edit Information</DropdownMenuItem>
+                                  <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
+                                  <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                      }
                     </TableBody>
                   </Table>
                 </div>

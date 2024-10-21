@@ -46,6 +46,8 @@ interface Event {
     total: number;
   }
 
+
+  //TODO ticket info after payement page creation
   
   export default function PaymentConfirmation() {
     const [event, setEvent] = useState<Event | null>(null);
