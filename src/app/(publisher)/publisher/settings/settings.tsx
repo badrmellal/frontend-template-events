@@ -49,35 +49,29 @@ const SettingPublisher: React.FC = () => {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true)
     const [selectedCountry, setSelectedCountry] = useState(africanCountries[0])
     const [phoneNumber, setPhoneNumber] = useState('')
+    const [bio, setBio] = useState('');
     const [savedPayoutMethod, setSavedPayoutMethod] = useState({ type: 'bank_transfer', details: '**** 1234' });
     const inputRef = useRef<HTMLInputElement>(null)
     const [publisher, setPublisher] = useState<User | null>();
     const [phoneError, setPhoneError] = useState<string | null>(null);
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([{ platform: '', url: '' }]);
+    const [socialLinkError, setSocialLinkError] = useState<string | null>(null);
     const addSocialLink = () => {
         setSocialLinks([...socialLinks, { platform: '', url: '' }]);
       };
-  const [isLoading, setIsLoading] = useState(false)
-  const {toast} = useToast();
-  const removeSocialLink = (index: number) => {
-        const newLinks = socialLinks.filter((_, i) => i !== index);
-        setSocialLinks(newLinks);
-      };
-    
-      const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
-        const newLinks = [...socialLinks];
-        newLinks[index][field] = value;
-        setSocialLinks(newLinks);
-      };
-    const [input, setInput] = useState<{
-      phoneNumber: string;
-      bio: string;
-        socialLinks: SocialLink[];
-    }>({
-        phoneNumber: '',
-        bio: '',
-        socialLinks: [{ platform: '', url: '' }]
-        });
+    const [isLoading, setIsLoading] = useState(false)
+    const {toast} = useToast();
+    const removeSocialLink = (index: number) => {
+          const newLinks = socialLinks.filter((_, i) => i !== index);
+          setSocialLinks(newLinks);
+        };
+      
+    const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
+      const newLinks = [...socialLinks];
+      newLinks[index][field] = value;
+      setSocialLinks(newLinks);
+    };
+
 
     useEffect(() => {
         if (inputRef.current) {
@@ -106,16 +100,25 @@ const SettingPublisher: React.FC = () => {
     
       useEffect(()=>{
         const fetchPublisher = async ()=>{
-          const fetchedPublisher = await axios.get<User>('http://localhost:8080/user/publisher-info',{
-            headers :{
-              Authorization : `Bearer ${localStorage.getItem('token')}`
+          try {
+            const response = await axios.get<User>('http://localhost:8080/user/publisher-info', {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`
+              }
+            });
+          
+            const fetchedPublisher = response.data;
+            setPublisher(fetchedPublisher);
+          
+            if (fetchedPublisher.socialLinks && fetchedPublisher.socialLinks.length > 0) {
+              setSocialLinks(fetchedPublisher.socialLinks);
             }
-          })
-          setPublisher(fetchedPublisher.data)
-          // if social links are not empty
-            if(fetchedPublisher.data.socialLinks.length > 0){
-                setSocialLinks(fetchedPublisher.data.socialLinks)
-            }
+          
+            setBio(fetchedPublisher.bio || '');
+
+          } catch (error) {
+            console.error('Error fetching publisher info:', error);
+          }
         }
         fetchPublisher();
       }
@@ -125,9 +128,9 @@ const SettingPublisher: React.FC = () => {
         localStorage.removeItem("token");
         window.location.reload();
       }
-  const storePhoneNumber = (rawNumber: string, country: string) => {
+  const storePhoneNumber = (rawNumber: string | undefined, country: string) => {
     // check if the raw number contains a country code
-    const hasCountryCode = rawNumber.startsWith('+');
+    const hasCountryCode = rawNumber?.startsWith('+');
     if(hasCountryCode) {
       setPhoneError('Please dont include the country code')
       throw new Error('Please dont include the country code')
@@ -147,36 +150,42 @@ const SettingPublisher: React.FC = () => {
     }
   };
 
-    const handleInputChange = (e: { target: { name: any; value: any; }; })=>{
-      setInput({
-        ...input,
-        [e.target.name]: e.target.value
-      })
+    const handleBioChange = (e: { target: { name: any; value: any; }; })=>{
+      setBio(e.target.value);
     }
+
       const handleSave = async ()=>{
         try{
           setIsLoading(true)
-          const { formattedNumber, countryCode } = storePhoneNumber(input.phoneNumber, selectedCountry.code);
+          const { formattedNumber, countryCode } = storePhoneNumber(phoneNumber, selectedCountry.code);
+            socialLinks.map(socialLink=>{
+              if(socialLink.platform.length == 0 || socialLink.url.length == 0){
+                setSocialLinkError("Please fill in the Platform Or Url area")
+                throw new Error("Please fill in the platform and url area")
+              }
+            })
             const updatedPublisher = {
                 ...publisher,
                 phoneNumber: formattedNumber,
                 countryCode: countryCode,
-                bio: input.bio,
+                bio: bio,
                 socialLinks: socialLinks
             }
+
               await axios.post('http://localhost:8080/user/update-publisher', updatedPublisher,{
                 headers :{
                   Authorization : `Bearer ${localStorage.getItem('token')}`
                 }
             }).then(()=>{
                 setIsLoading(false);
+                setPhoneError(null);
+                setSocialLinkError(null)
                 toast({
                     description: "Profile updated successfully",
                 })
             })
         }catch(e){
           setIsLoading(false)
-          console.log(e)
         }
       }
     return (
@@ -284,8 +293,8 @@ const SettingPublisher: React.FC = () => {
                       ref={inputRef}
                       type="tel"
                       placeholder="Phone number"
-                      value={input.phoneNumber}
-                      onChange={handleInputChange}
+                      value={phoneNumber}
+                      onChange={handlePhoneChange}
                       className="flex-grow"
                       name="phoneNumber"
                     />
@@ -299,7 +308,7 @@ const SettingPublisher: React.FC = () => {
                     id="bio"
                     placeholder="Tell your customers about yourself or your organisation and your events... (max 255 characters)"
                     maxLength={MAX_BIO_LENGTH}
-                    onChange={handleInputChange}
+                    onChange={handleBioChange}
                     defaultValue={publisher?.bio}
                     name={"bio"}
                   />
@@ -340,6 +349,9 @@ const SettingPublisher: React.FC = () => {
                         </Button>
                         </div>
                     ))}
+                    {
+                        socialLinkError && <p className="text-red-600 text-sm">{socialLinkError}</p>
+                    }
                     <Button
                         variant="outline"
                         size="sm"
@@ -349,12 +361,13 @@ const SettingPublisher: React.FC = () => {
                         <PlusCircle className="h-4 w-4 mr-2" />
                         Add Social Link
                     </Button>
+                  
                     </div>
                 </CardContent>
                 <CardFooter>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" disabled={isLoading || input.phoneNumber.length===0}>
+                      <Button variant="outline" disabled={isLoading || phoneNumber?.length===0}>
                         {isLoading ? "Saving..." : "Save changes"}
                       </Button>
                     </DialogTrigger>
