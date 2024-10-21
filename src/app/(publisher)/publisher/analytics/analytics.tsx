@@ -40,7 +40,7 @@ import Footer from "@/app/components/footer"
 
 export default function Analytics() {
 
-
+//TODO ticket Type distribution
 
 
   const handleLogOut = () => {
