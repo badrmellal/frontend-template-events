@@ -1,4 +1,4 @@
-import {  Download, Headset, LogOut, MoreHorizontal} from "lucide-react"
+import { Download, Headset, LogOut, MoreHorizontal, Search } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,92 +43,100 @@ import { jwtDecode } from "jwt-decode"
 import axios from "axios"
 
 export default function Attendees() {
-
   const route = useRouter();
-  const [tickets, setTickets] =useState<Ticket[] | undefined>()
+  const [tickets, setTickets] = useState<Ticket[] | undefined>()
   const [isLoading, setIsLoading] = useState(true)
   const [events, setEvents] = useState<Event[] | undefined>()
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedEvent, setSelectedEvent] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("all")
+
   const handleLogOut = () => {
     localStorage.removeItem("token");
     route.push('/login')
   };
-//TODO make data dynamic
-async function fetchMultipleData() {
-  try {
-    const token = localStorage.getItem('token');
-    //decode token
-    if (token) {
-      const decodedToken = jwtDecode(token);
-      const email = decodedToken.sub;
-      const [tickets, events] = await Promise.all([
-      axios.get(`http://localhost:8080/publisher/tickets-details/${email}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-        ),
-      axios.get(`http://localhost:8080/publisher/events-details/${email}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-        ),
-    ]);
 
-    return {
-      tickets: tickets.data,
-      events: events.data,
-    };}
-  } catch (error) {
-    throw error;
-  }
-}
-useEffect(()=>{
-  const fetching = async ()=>{
+  const filteredAttendees = tickets?.filter(ticket =>
+    (ticket.usersDto.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     ticket.usersDto.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     ticket.eventsDto.eventName.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (selectedEvent === "all" || ticket.eventsDto.eventName === selectedEvent) &&
+    (selectedStatus === "all" || ticket.paymentStatus === selectedStatus)
+  )
+
+  async function fetchMultipleData() {
     try {
-      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      if (token) {
+        const decodedToken = jwtDecode(token);
+        const email = decodedToken.sub;
+        const [tickets, events] = await Promise.all([
+          axios.get(`http://localhost:8080/publisher/tickets-details/${email}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          axios.get(`http://localhost:8080/publisher/events-details/${email}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+        ]);
+
+        return {
+          tickets: tickets.data,
+          events: events.data,
+        };
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  useEffect(() => {
+    const fetching = async () => {
+      try {
+        setIsLoading(true);
         const results = await fetchMultipleData();
         setTickets(results?.tickets);
         setEvents(results?.events)
-    }catch(err){
-      console.error(err);
-    }finally {
-      setIsLoading(false);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }
-  fetching();
-},[])
+    fetching();
+  }, [])
 
   return (
     <div className="flex min-h-screen bg-black flex-col">
-       <SidebarPublisher />
-     <div className="flex justify-end pt-4 pr-4">
-                <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    className="overflow-hidden rounded-full"
-                >
-                    <Image
-                    src="/profile_avatar.png"
-                    width={36}
-                    height={36}
-                    alt="Avatar"
-                    className="overflow-hidden rounded-full"
-                    />
-                </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-            </div>
+      <SidebarPublisher />
+      <div className="flex justify-end pt-4 pr-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="overflow-hidden rounded-full"
+            >
+              <Image
+                src="/profile_avatar.png"
+                width={36}
+                height={36}
+                alt="Avatar"
+                className="overflow-hidden rounded-full"
+              />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem><Headset className="h-4 w-4 mx-1 text-gray-500" /> Support</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogOut}> <LogOut className="h-4 w-4 mx-1 text-gray-500" /> Logout</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <main className="flex-1 sm:ml-12">
         <div className="container py-6 md:py-10">
           <div className="flex items-center justify-between">
@@ -146,27 +154,35 @@ useEffect(()=>{
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex flex-col space-y-4 md:flex-row md:items-center md:space-x-4 md:space-y-0">
-                    <Input placeholder="Search attendees..." className="md:max-w-xs" />
-                    <Select>
+                    <div className="relative">
+                      <Search className="absolute h-5 w-5 top-2 left-1 text-gray-500 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search attendees..." 
+                        className="md:max-w-xs pl-7"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <Select value={selectedEvent} onValueChange={setSelectedEvent}>
                       <SelectTrigger className="md:max-w-xs">
                         <SelectValue placeholder="Filter by event" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Events</SelectItem>
-                        {events?.map((event,index)=>(
-                          <SelectItem value="summer-beats-2023" key={index}>{event.eventName}</SelectItem>
-                        )) }
+                        {events?.map((event, index) => (
+                          <SelectItem value={event.eventName} key={index}>{event.eventName}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <Select>
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                       <SelectTrigger className="md:max-w-xs">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="COMPLETED">Confirmed</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="REFUNDED">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -182,32 +198,30 @@ useEffect(()=>{
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {
-                        tickets?.map((ticket, index)=>(
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{ticket.usersDto.username}</TableCell>
-                            <TableCell>{ticket.usersDto.email}</TableCell>
-                            <TableCell>{ticket.eventsDto.eventName}</TableCell>
-                            <TableCell>{ticket.ticketType}</TableCell>
-                            <TableCell><Badge>{ticket.paymentStatus}</Badge></TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                                  <DropdownMenuItem>Edit Information</DropdownMenuItem>
-                                  <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
-                                  <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
+                      {filteredAttendees?.map((ticket, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{ticket.usersDto.username}</TableCell>
+                          <TableCell>{ticket.usersDto.email}</TableCell>
+                          <TableCell>{ticket.eventsDto.eventName}</TableCell>
+                          <TableCell>{ticket.ticketType}</TableCell>
+                          <TableCell><Badge>{ticket.paymentStatus}</Badge></TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>View Details</DropdownMenuItem>
+                                <DropdownMenuItem>Edit Information</DropdownMenuItem>
+                                <DropdownMenuItem>Resend Confirmation</DropdownMenuItem>
+                                <DropdownMenuItem>Cancel Ticket</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
                         </TableRow>
-                        ))
-                      }
+                      ))}
                     </TableBody>
                   </Table>
                 </div>
@@ -216,10 +230,10 @@ useEffect(()=>{
           </div>
         </div>
       </main>
-      
+
       <div className="sm:pl-14 pl-0">
-          <Footer />
-        </div>
+        <Footer />
+      </div>
     </div>
   )
 }

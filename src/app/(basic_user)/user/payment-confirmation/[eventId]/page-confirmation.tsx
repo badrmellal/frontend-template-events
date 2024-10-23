@@ -144,7 +144,7 @@ interface Event {
   }, [isExpired])
 
   const handleExpiredClose = () => {
-    router.push('/')
+    router.push('/login')
   }
 
   const formatTime = (seconds: number) => {

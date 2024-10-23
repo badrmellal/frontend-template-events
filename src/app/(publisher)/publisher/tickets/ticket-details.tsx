@@ -27,18 +27,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Ticket } from "@/types/user"
+import { formatDate } from "date-fns"
 
 
-interface Ticket {
-    id: string
-    eventName: string
-    customerName: string
-    customerEmail: string
-    ticketType: string
-    purchaseDate: string
-    status: "Valid" | "Used" | "Refunded"
-    // later  other fields that are part of Ticket object
-  }
 
 interface TicketDetailsProps {
     ticket: Ticket | null
@@ -61,7 +53,9 @@ interface TicketDetailsProps {
               <span className="sr-only">Copy Ticket ID</span>
             </Button>
           </CardTitle>
-          <CardDescription>Date: {ticket.purchaseDate}</CardDescription>
+          <CardDescription>Date: {formatDate(ticket.purchaseDate,
+                            "dd MMM yyyy, HH:mm"
+          )}</CardDescription>
         </div>
         <div className="ml-auto flex items-center gap-1">
           <DropdownMenu>
@@ -86,7 +80,7 @@ interface TicketDetailsProps {
           <ul className="grid gap-3">
           <li className="flex items-center justify-between">
               <span className="text-muted-foreground">
-                {ticket.eventName} <span>1</span>
+                {ticket.eventsDto.eventName} <span>1</span>
               </span>
               <span>$150.00</span> {/* Later should add a price field to the Ticket interface */}
             </li>
@@ -120,7 +114,7 @@ interface TicketDetailsProps {
             <div className="font-semibold">Billing Information</div>
             <div className="text-muted-foreground">
             <address className="grid gap-0.5 not-italic text-muted-foreground">
-            <span>{ticket.customerName}</span>
+            <span>{ticket.usersDto.username}</span>
               <span>23 Main St.</span>
               <span>London, UK 12B39</span>
             </address>
@@ -133,12 +127,12 @@ interface TicketDetailsProps {
           <dl className="grid gap-3">
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Customer</dt>
-              <dd>{ticket.customerName}</dd>
+              <dd>{ticket.usersDto.username}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Email</dt>
               <dd>
-                <a href={`mailto:${ticket.customerEmail}`}>{ticket.customerEmail}</a>
+                <a href={`mailto:${ticket.usersDto.email}`}>{ticket.usersDto.email}</a>
               </dd>
             </div>
             <div className="flex items-center justify-between">
@@ -166,7 +160,11 @@ interface TicketDetailsProps {
       </ScrollArea>
       <CardFooter className="flex-shrink-0 flex flex-row items-center border-t bg-muted/50 mb-16 px-6 py-3">
         <div className="text-xs text-muted-foreground">
-          Updated <time dateTime={ticket.purchaseDate}>{ticket.purchaseDate}</time>
+          Updated <time dateTime={formatDate(ticket.purchaseDate,
+                            "dd MMM yyyy, HH:mm"
+                        )}>{formatDate(ticket.purchaseDate,
+                          "dd MMM yyyy, HH:mm"
+                      )}</time>
         </div>
       </CardFooter>
     </Card>

@@ -16,14 +16,17 @@ import axios from "axios"
 import { jwtDecode } from "jwt-decode"
 import {formatDate} from "date-fns";
 import {  Ticket } from "@/types/user"
+import { useRouter } from "next/navigation"
+import TicketDetails from "./ticket-details"
 
 
 
 
 
-//TODO verify ticket details problm
+
 
 export default function Tickets() {
+  const route = useRouter();
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedEvent, setSelectedEvent] = useState("All Events")
   const [selectedStatus, setSelectedStatus] = useState("All Statuses")
@@ -60,7 +63,7 @@ export default function Tickets() {
 
   const handleLogOut = () => {
     localStorage.removeItem("token");
-    window.location.reload();
+    route.push('/login')
 };
 
   useEffect(()=>{
@@ -232,9 +235,8 @@ export default function Tickets() {
             <SheetDescription>View and manage ticket information</SheetDescription>
           </SheetHeader>
           <div className="mt-4">
-            {/*{tickets &&*/}
-            {/*  <TicketDetails ticket={selectedTicket} />*/}
-            {/*}*/}
+          {selectedTicket && <TicketDetails ticket={selectedTicket} />}
+
           </div>
         </SheetContent>
       </Sheet>
